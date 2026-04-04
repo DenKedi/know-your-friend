@@ -19,53 +19,75 @@ export default function Lobby() {
   if (!match || !roomCode) return null;
 
   if (!state) {
-    return <div className="min-h-[100dvh] flex items-center justify-center text-xl font-bold">Connecting...</div>;
+    return (
+      <div className="min-h-[100dvh] flex items-center justify-center">
+        <div className="text-xl font-bold animate-pulse">Verbinde…</div>
+      </div>
+    );
   }
 
   const playerId = sessionStorage.getItem(`kyf_id_${roomCode}`);
-  const me = state.players.find(p => p.id === playerId);
+  const me = state.players.find((p) => p.id === playerId);
   const isHost = me?.isHost;
 
   return (
-    <div className="min-h-[100dvh] p-4 md:p-8 flex flex-col items-center">
-      <div className="w-full max-w-2xl text-center mb-8 pt-8">
-        <h2 className="text-xl font-bold text-muted-foreground uppercase tracking-widest mb-2">Room Code</h2>
-        <div className="text-6xl md:text-8xl font-black text-primary tracking-widest bg-card inline-block px-8 py-4 rounded-3xl border-4 border-black/20 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)]">
+    <div className="min-h-[100dvh] px-4 py-8 flex flex-col items-center">
+
+      {/* Room code hero */}
+      <div className="w-full max-w-lg text-center mb-8">
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
+          Raum-Code
+        </p>
+        <div className="text-6xl font-black text-primary tracking-[0.2em] bg-card inline-block px-8 py-4 rounded-2xl border-2 border-border shadow-lg">
           {roomCode}
         </div>
+        <p className="text-sm text-muted-foreground mt-3">
+          Teile diesen Code mit deinen Freunden
+        </p>
       </div>
 
-      <Card className="w-full max-w-lg bg-card border-4 border-black/20 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)]">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">
-            Players ({state.players.length})
+      {/* Players */}
+      <Card className="w-full max-w-lg border-2 border-border shadow-lg">
+        <CardHeader className="pb-3 pt-5 px-5">
+          <CardTitle className="text-xl font-black flex items-center justify-between">
+            <span>Spieler ({state.players.length})</span>
+            <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-green-500" : "bg-muted-foreground"}`} />
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            {state.players.map(p => (
-              <div key={p.id} className="bg-input p-3 rounded-xl font-bold text-lg flex items-center justify-between">
-                <span>{p.name}</span>
-                {p.isHost && <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full uppercase">Host</span>}
+        <CardContent className="px-4 pb-5">
+          <div className="grid grid-cols-2 gap-2.5 mb-6">
+            {state.players.map((p) => (
+              <div
+                key={p.id}
+                className="bg-input px-4 py-3 rounded-xl font-bold text-base flex items-center justify-between gap-2"
+              >
+                <span className="truncate">{p.name}</span>
+                {p.isHost && (
+                  <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full uppercase font-black flex-shrink-0">
+                    Host
+                  </span>
+                )}
               </div>
             ))}
           </div>
 
-          <div className="pt-8">
-            {isHost ? (
-              <Button 
-                className="w-full py-8 text-2xl font-black uppercase tracking-wider animate-pulse hover:animate-none hover:-translate-y-1 transition-transform"
-                onClick={() => send({ type: "start_game" })}
-                disabled={state.players.length < 2}
-              >
-                {state.players.length < 2 ? "Waiting for players..." : "Start Game!"}
-              </Button>
-            ) : (
-              <div className="text-center p-6 bg-input rounded-xl border-2 border-dashed border-muted-foreground/50">
-                <p className="text-xl font-bold animate-pulse text-muted-foreground">Waiting for host to start...</p>
-              </div>
-            )}
-          </div>
+          {isHost ? (
+            <Button
+              className="w-full py-6 text-xl font-black uppercase tracking-wider rounded-xl"
+              onClick={() => send({ type: "start_game" })}
+              disabled={state.players.length < 2}
+            >
+              {state.players.length < 2
+                ? "Warte auf Spieler…"
+                : "Spiel starten!"}
+            </Button>
+          ) : (
+            <div className="text-center p-5 bg-input rounded-xl border-2 border-dashed border-muted-foreground/40">
+              <p className="text-base font-bold animate-pulse text-muted-foreground">
+                Warte auf den Host…
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

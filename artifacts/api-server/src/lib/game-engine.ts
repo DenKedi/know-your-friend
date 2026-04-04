@@ -41,6 +41,7 @@ export interface Room {
   totalRounds: number;
   currentPlayerIndex: number;
   currentCategory: Category | null;
+  currentAvailableCategories: Category[];
   selfRating: number | null;
   guesses: Map<string, number>;
   roundResults: GuessResult[] | null;
@@ -51,18 +52,18 @@ export const CATEGORIES: Category[] = [
   { id: "ordentlich", label: "Ordentlichkeit", leftLabel: "Messie", rightLabel: "Ordnungsqueen" },
   { id: "puenktlich", label: "Pünktlichkeit", leftLabel: "Chronisch zu spät", rightLabel: "Immer pünktlich" },
   { id: "sportlich", label: "Sportlichkeit", leftLabel: "Couchpotato", rightLabel: "Fitnessjunkie" },
-  { id: "gespraechig", label: "Gesprächigkeit", leftLabel: "Schweiger", rightLabel: "Kann nicht schweigen" },
+  { id: "gespraechig", label: "Gesprächigkeit", leftLabel: "Schweiger", rightLabel: "Redet ohne Pause" },
   { id: "risikofreudig", label: "Risikobereitschaft", leftLabel: "Supersicher", rightLabel: "Adrenalin-Junkie" },
   { id: "romantisch", label: "Romantik", leftLabel: "Pragmatiker", rightLabel: "Hopeless Romantic" },
   { id: "humorvoll", label: "Humor", leftLabel: "Stockernst", rightLabel: "Comedian" },
   { id: "kreativ", label: "Kreativität", leftLabel: "Pragmatiker", rightLabel: "Superkreativ" },
-  { id: "ehrgeizig", label: "Ehrgeiz", leftLabel: "Entspannt", rightLabel: "Workaholiker" },
-  { id: "vertrauenswuerdig", label: "Offenheit", leftLabel: "Geheimniskrämer", rightLabel: "Offenes Buch" },
+  { id: "ehrgeizig", label: "Ehrgeiz", leftLabel: "Entspannt", rightLabel: "Workaholic" },
+  { id: "offen", label: "Offenheit", leftLabel: "Geheimniskrämer", rightLabel: "Offenes Buch" },
   { id: "sparsam", label: "Sparsamkeit", leftLabel: "Lebemann", rightLabel: "Sparfuchs" },
   { id: "technikaffin", label: "Technikaffinität", leftLabel: "Analog-Liebhaber", rightLabel: "Tech-Nerd" },
   { id: "sozial", label: "Geselligkeit", leftLabel: "Einsiedler", rightLabel: "Partylöwe" },
-  { id: "optimistisch", label: "Lebenseinstellung", leftLabel: "Pessimist", rightLabel: "Unverbesserlicher Optimist" },
-  { id: "musikgeschmack", label: "Musikgeschmack", leftLabel: "One-Song-Fan", rightLabel: "Musikenzyklopädie" },
+  { id: "optimistisch", label: "Lebenseinstellung", leftLabel: "Pessimist", rightLabel: "Optimist" },
+  { id: "musikgeschmack", label: "Musikwissen", leftLabel: "Kennt nur Hits", rightLabel: "Musikenzyklopädie" },
 ];
 
 const rooms = new Map<string, Room>();
@@ -77,6 +78,12 @@ function generateId(): string {
 
 function generateToken(): string {
   return randomBytes(16).toString("hex");
+}
+
+function pickCategoriesForTurn(room: Room): void {
+  const remaining = CATEGORIES.filter((c) => !room.usedCategoryIds.has(c.id));
+  const shuffled = [...remaining].sort(() => Math.random() - 0.5);
+  room.currentAvailableCategories = shuffled.slice(0, Math.min(3, shuffled.length));
 }
 
 export function createRoom(hostName: string, totalRounds: number): { room: Room; player: Player } {
@@ -105,6 +112,7 @@ export function createRoom(hostName: string, totalRounds: number): { room: Room;
     totalRounds,
     currentPlayerIndex: 0,
     currentCategory: null,
+    currentAvailableCategories: [],
     selfRating: null,
     guesses: new Map(),
     roundResults: null,
@@ -154,6 +162,7 @@ export function startGame(room: Room): boolean {
   room.currentRound = 1;
   room.currentPlayerIndex = 0;
   room.usedCategoryIds = new Set();
+  pickCategoriesForTurn(room);
   return true;
 }
 
@@ -244,13 +253,12 @@ export function nextTurn(room: Room): boolean {
   room.selfRating = null;
   room.guesses = new Map();
   room.roundResults = null;
+  pickCategoriesForTurn(room);
   return true;
 }
 
 export function getRoomStateForClient(room: Room, viewerPlayerId?: string) {
   const currentPlayer = room.players[room.currentPlayerIndex];
-  const usedIds = room.usedCategoryIds;
-  const availableCategories = CATEGORIES.filter((c) => !usedIds.has(c.id));
 
   return {
     roomCode: room.code,
@@ -272,7 +280,7 @@ export function getRoomStateForClient(room: Room, viewerPlayerId?: string) {
     guessesSubmitted: room.guesses.size,
     guessesTotal: Math.max(0, room.players.length - 1),
     roundResults: room.roundResults,
-    availableCategories,
+    availableCategories: room.currentAvailableCategories,
   };
 }
 

@@ -6,11 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GameSlider } from "@/components/game-slider";
 import { Progress } from "@/components/ui/progress";
 
+const MARKER_COLORS = [
+  { bg: "#FF4B8B", text: "#fff" },
+  { bg: "#00C8E8", text: "#111" },
+  { bg: "#9B60FF", text: "#fff" },
+  { bg: "#2ECC71", text: "#111" },
+  { bg: "#FF6B35", text: "#fff" },
+];
+
 export default function Game() {
   const [match, params] = useRoute("/room/:code/game");
   const roomCode = params?.code;
   const [, setLocation] = useLocation();
-  const { state, send, isConnected } = useGameSocket(roomCode);
+  const { state, send } = useGameSocket(roomCode);
   const [sliderValue, setSliderValue] = useState(50);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
@@ -23,18 +31,16 @@ export default function Game() {
   }, [state?.status, roomCode, setLocation]);
 
   useEffect(() => {
-    // Reset submission state on phase change
     setHasSubmitted(false);
     setSliderValue(50);
-  }, [state?.status, state?.currentRound]);
+  }, [state?.status, state?.currentRound, state?.currentPlayerId]);
 
   if (!match || !roomCode || !state) return null;
 
   const playerId = sessionStorage.getItem(`kyf_id_${roomCode}`);
-  const me = state.players.find(p => p.id === playerId);
+  const me = state.players.find((p) => p.id === playerId);
   const isCurrentPlayer = state.currentPlayerId === playerId;
-  const currentPlayer = state.players.find(p => p.id === state.currentPlayerId);
-  const isHost = me?.isHost;
+  const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
 
   const handleSelectCategory = (categoryId: string) => {
     send({ type: "select_category", categoryId });
@@ -54,145 +60,193 @@ export default function Game() {
     send({ type: "next_turn" });
   };
 
-  const leaveRoom = () => {
-    setLocation("/");
-  };
+  const isLastTurn =
+    state.currentRound >= state.totalRounds &&
+    state.players.length > 0 &&
+    state.currentPlayerId === state.players[state.players.length - 1]?.id;
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Header */}
-      <header className="p-4 flex items-center justify-between border-b border-border bg-card">
-        <Button variant="ghost" size="sm" onClick={leaveRoom}>Leave</Button>
-        <div className="flex flex-col items-center">
-          <span className="text-xs font-bold text-muted-foreground uppercase">Round {state.currentRound} of {state.totalRounds}</span>
-          <Progress value={(state.currentRound / state.totalRounds) * 100} className="w-32 h-2 mt-1" />
+      <header className="px-4 py-3 flex items-center justify-between border-b border-border bg-card shrink-0">
+        <Button variant="ghost" size="sm" onClick={() => setLocation("/")}>
+          Verlassen
+        </Button>
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Runde {state.currentRound} / {state.totalRounds}
+          </span>
+          <Progress
+            value={(state.currentRound / state.totalRounds) * 100}
+            className="w-28 h-1.5"
+          />
         </div>
-        <div className="font-bold bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm">
-          {me?.score || 0} pts
+        <div className="font-black bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm tabular-nums">
+          {me?.score ?? 0} Pkt
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center p-4 max-w-3xl mx-auto w-full mt-4 md:mt-8">
-        
+      <main className="flex-1 flex flex-col items-center px-4 py-5 max-w-xl mx-auto w-full overflow-y-auto">
+
+        {/* ── KATEGORIE WÄHLEN ─────────────────────────────────── */}
         {state.status === "category_selection" && (
-          <Card className="w-full bg-card border-4 border-black/20 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)]">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center">
-                {isCurrentPlayer ? "Pick a Category" : "Waiting for " + currentPlayer?.name + " to pick..."}
+          <Card className="w-full bg-card border-2 border-border shadow-lg">
+            <CardHeader className="pb-3 pt-5 px-5">
+              <CardTitle className="text-xl text-center leading-tight">
+                {isCurrentPlayer
+                  ? "Wähle eine Kategorie"
+                  : `${currentPlayer?.name} wählt eine Kategorie…`}
               </CardTitle>
+              {isCurrentPlayer && (
+                <p className="text-sm text-center text-muted-foreground mt-1">
+                  Du bewertest dich selbst – wähl ehrlich!
+                </p>
+              )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-5">
               {isCurrentPlayer ? (
-                <div className="space-y-3">
-                  {state.availableCategories.map(cat => (
-                    <Button 
-                      key={cat.id} 
-                      variant="outline" 
-                      className="w-full justify-start text-lg py-6 h-auto font-bold"
+                <div className="space-y-2.5">
+                  {state.availableCategories.map((cat) => (
+                    <button
+                      key={cat.id}
                       onClick={() => handleSelectCategory(cat.id)}
+                      className="w-full text-left bg-input hover:bg-input/70 active:scale-[0.98] transition-all rounded-xl p-4 border-2 border-transparent hover:border-primary/40 group"
                     >
-                      {cat.label}
-                      <span className="ml-auto text-xs text-muted-foreground font-normal">
-                        {cat.leftLabel} ↔ {cat.rightLabel}
-                      </span>
-                    </Button>
+                      <div className="font-black text-lg text-foreground group-hover:text-primary transition-colors">
+                        {cat.label}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-xs font-semibold text-primary truncate max-w-[42%]">
+                          {cat.leftLabel}
+                        </span>
+                        <span className="text-muted-foreground/60 text-xs flex-shrink-0">↔</span>
+                        <span className="text-xs font-semibold text-secondary truncate max-w-[42%] text-right ml-auto">
+                          {cat.rightLabel}
+                        </span>
+                      </div>
+                    </button>
                   ))}
                 </div>
               ) : (
-                <div className="py-12 flex justify-center">
-                  <div className="animate-pulse w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                    <div className="w-8 h-8 rounded-full bg-primary" />
-                  </div>
+                <div className="py-10 flex flex-col items-center gap-4">
+                  <div className="w-14 h-14 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                  <p className="text-sm text-muted-foreground font-semibold">Bitte warten…</p>
                 </div>
               )}
             </CardContent>
           </Card>
         )}
 
+        {/* ── SELBSTEINSCHÄTZUNG ───────────────────────────────── */}
         {state.status === "self_rating" && (
-          <div className="w-full space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">{state.currentCategoryLabel}</h2>
-              <p className="text-lg font-medium text-muted-foreground">
-                {isCurrentPlayer ? "Where do you place yourself?" : `Shhh... ${currentPlayer?.name} is rating themselves`}
+          <div className="w-full space-y-4">
+            <div className="text-center px-2">
+              <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
+                {state.currentCategoryLabel}
+              </h2>
+              <p className="text-base text-muted-foreground mt-1">
+                {isCurrentPlayer
+                  ? "Wo ordnest du dich ein?"
+                  : `Psst… ${currentPlayer?.name} bewertet sich gerade`}
               </p>
             </div>
 
             {isCurrentPlayer ? (
-              <Card className="border-4 border-black/20 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)]">
-                <CardContent className="pt-6">
+              <Card className="border-2 border-border shadow-lg">
+                <CardContent className="px-4 pt-4 pb-5">
                   {!hasSubmitted ? (
                     <>
-                      <GameSlider 
+                      <GameSlider
                         value={sliderValue}
                         onChange={setSliderValue}
                         leftLabel={state.currentCategoryLeftLabel}
                         rightLabel={state.currentCategoryRightLabel}
                         showValue
                       />
-                      <Button 
-                        className="w-full py-8 text-xl font-bold mt-8"
+                      <Button
+                        className="w-full py-7 text-lg font-black mt-4 rounded-xl"
                         onClick={handleSubmitRating}
                       >
-                        Lock it in
+                        Festlegen
                       </Button>
                     </>
                   ) : (
-                    <div className="py-12 text-center text-xl font-bold text-muted-foreground">
-                      Rating hidden. Waiting for friends to guess...
+                    <div className="py-10 text-center space-y-2">
+                      <div className="text-4xl font-black text-primary">{sliderValue}</div>
+                      <p className="text-muted-foreground font-semibold">
+                        Versteckt – deine Freunde raten gerade…
+                      </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             ) : (
-              <div className="flex justify-center py-20">
-                <div className="w-32 h-32 rounded-full border-8 border-primary border-t-transparent animate-spin" />
+              <div className="flex justify-center py-16">
+                <div className="w-20 h-20 rounded-full border-8 border-primary border-t-transparent animate-spin" />
               </div>
             )}
           </div>
         )}
 
+        {/* ── RATEN ───────────────────────────────────────────── */}
         {state.status === "guessing" && (
-          <div className="w-full space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">{state.currentCategoryLabel}</h2>
-              <p className="text-lg font-medium text-muted-foreground">
-                {isCurrentPlayer 
-                  ? `Your friends are guessing... (${state.guessesSubmitted}/${state.guessesTotal})` 
-                  : `Where did ${currentPlayer?.name} place themselves?`}
+          <div className="w-full space-y-4">
+            <div className="text-center px-2">
+              <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
+                {state.currentCategoryLabel}
+              </h2>
+              <p className="text-base text-muted-foreground mt-1">
+                {isCurrentPlayer
+                  ? `Deine Freunde raten… (${state.guessesSubmitted}/${state.guessesTotal})`
+                  : `Wo hat sich ${currentPlayer?.name} eingeschätzt?`}
               </p>
             </div>
 
-            <Card className="border-4 border-black/20 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)]">
-              <CardContent className="pt-6">
+            <Card className="border-2 border-border shadow-lg">
+              <CardContent className="px-4 pt-4 pb-5">
                 {!isCurrentPlayer ? (
                   !hasSubmitted ? (
                     <>
-                      <GameSlider 
+                      <GameSlider
                         value={sliderValue}
                         onChange={setSliderValue}
                         leftLabel={state.currentCategoryLeftLabel}
                         rightLabel={state.currentCategoryRightLabel}
                         showValue
                       />
-                      <Button 
-                        className="w-full py-8 text-xl font-bold mt-8"
+                      <Button
+                        className="w-full py-7 text-lg font-black mt-4 rounded-xl"
                         onClick={handleSubmitGuess}
                       >
-                        Submit Guess
+                        Tipp abgeben
                       </Button>
                     </>
                   ) : (
-                    <div className="py-12 text-center text-xl font-bold text-muted-foreground">
-                      Guess submitted! Waiting for others... ({state.guessesSubmitted}/{state.guessesTotal})
+                    <div className="py-10 text-center space-y-2">
+                      <div className="text-4xl font-black text-primary">
+                        {state.guessesSubmitted}/{state.guessesTotal}
+                      </div>
+                      <p className="text-muted-foreground font-semibold">
+                        Tipp abgegeben! Warte auf die anderen…
+                      </p>
                     </div>
                   )
                 ) : (
-                  <div className="py-12 flex flex-col items-center">
-                    <div className="text-5xl font-black mb-4 text-primary">
-                      {state.guessesSubmitted} / {state.guessesTotal}
+                  <div className="py-10 flex flex-col items-center gap-3">
+                    <div className="text-5xl font-black text-primary tabular-nums">
+                      {state.guessesSubmitted}/{state.guessesTotal}
                     </div>
-                    <div className="text-muted-foreground font-bold uppercase tracking-wider">Guesses in</div>
+                    <div className="text-muted-foreground font-bold uppercase tracking-wider text-sm">
+                      Tipps eingegangen
+                    </div>
+                    <div className="w-full bg-input rounded-full h-2 mt-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${state.guessesTotal > 0 ? (state.guessesSubmitted / state.guessesTotal) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -200,64 +254,93 @@ export default function Game() {
           </div>
         )}
 
+        {/* ── RUNDEN-ERGEBNIS ─────────────────────────────────── */}
         {state.status === "round_results" && state.roundResults && (
-          <div className="w-full space-y-6 animate-in fade-in zoom-in duration-500">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">The Truth Revealed!</h2>
-              <p className="text-lg font-medium text-muted-foreground">Category: {state.currentCategoryLabel}</p>
+          <div className="w-full space-y-4 animate-in fade-in duration-500">
+
+            {/* Title */}
+            <div className="text-center px-2">
+              <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
+                Auflösung!
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {currentPlayer?.name} bei{" "}
+                <span className="font-bold text-foreground">
+                  {state.currentCategoryLabel}
+                </span>
+              </p>
             </div>
 
-            <Card className="border-4 border-black/20 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] overflow-hidden">
-              <CardContent className="pt-8 pb-8">
-                <GameSlider 
+            {/* Slider reveal */}
+            <Card className="border-2 border-border shadow-lg overflow-hidden">
+              <CardContent className="px-4 pt-4 pb-5">
+                <GameSlider
                   disabled
                   leftLabel={state.currentCategoryLeftLabel}
                   rightLabel={state.currentCategoryRightLabel}
                   markers={[
-                    ...state.roundResults.map((r, i) => ({
+                    ...state.roundResults.map((r) => ({
                       value: r.guess,
                       label: r.playerName,
-                      color: `bg-chart-${(i % 5) + 1}`
                     })),
                     {
-                      value: state.selfRating || 0,
-                      label: `${currentPlayer?.name}'s rating`,
-                      isTruth: true
-                    }
+                      value: state.selfRating ?? 0,
+                      label: currentPlayer?.name ?? "Wahrheit",
+                      isTruth: true,
+                    },
                   ]}
                 />
               </CardContent>
             </Card>
 
-            <div className="grid gap-3 mt-8">
-              {state.roundResults.sort((a, b) => b.points - a.points).map((r, i) => (
-                <div 
-                  key={r.playerId} 
-                  className="bg-card p-4 rounded-xl border-2 border-border flex items-center justify-between animate-in slide-in-from-bottom-4"
-                  style={{ animationDelay: `${i * 150}ms`, animationFillMode: 'both' }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-black text-secondary-foreground">
-                      {i + 1}
+            {/* Score rows */}
+            <div className="space-y-2">
+              {[...state.roundResults]
+                .sort((a, b) => b.points - a.points)
+                .map((r, i) => {
+                  const color = MARKER_COLORS[
+                    state.roundResults!.findIndex((x) => x.playerId === r.playerId) %
+                      MARKER_COLORS.length
+                  ];
+                  return (
+                    <div
+                      key={r.playerId}
+                      className="bg-card rounded-xl border border-border px-4 py-3 flex items-center justify-between animate-in slide-in-from-bottom-4"
+                      style={{
+                        animationDelay: `${i * 100}ms`,
+                        animationFillMode: "both",
+                      }}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black"
+                          style={{ background: color.bg, color: color.text }}
+                        >
+                          {r.playerName.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-base truncate">{r.playerName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Tipp: {r.guess} · Wahrheit: {state.selfRating} · Diff: {r.diff}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-2">
+                        <div className="font-black text-xl text-primary">+{r.points}</div>
+                        <div className="text-xs text-muted-foreground">Punkte</div>
+                      </div>
                     </div>
-                    <span className="font-bold text-lg">{r.playerName}</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-black text-xl text-primary">+{r.points} pts</div>
-                    <div className="text-xs text-muted-foreground font-bold">Diff: {r.diff}</div>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
             </div>
 
-            {(isHost || isCurrentPlayer) && (
-              <Button 
-                className="w-full py-8 text-xl font-bold mt-4"
-                onClick={handleNextTurn}
-              >
-                {state.currentRound >= state.totalRounds ? "Finish Game" : "Next Round"}
-              </Button>
-            )}
+            {/* Next button – anyone can advance */}
+            <Button
+              className="w-full py-6 text-lg font-black rounded-xl mt-2"
+              onClick={handleNextTurn}
+            >
+              {isLastTurn ? "Spiel beenden" : "Weiter"}
+            </Button>
           </div>
         )}
       </main>
