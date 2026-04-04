@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { RoomState } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { RoomState } from "@workspace/api-client-react/src/generated/api.schemas";
 import { useToast } from "./use-toast";
 
 type OutgoingMessage =
@@ -18,10 +18,12 @@ export function useGameSocket(roomCode: string | undefined) {
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const unmountedRef = useRef(false);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
   const connect = useCallback(() => {
-    if (!roomCode) return;
+    if (!roomCode || unmountedRef.current) return;
 
     const token = sessionStorage.getItem(`kyf_token_${roomCode}`);
     if (!token) {
@@ -31,16 +33,25 @@ export function useGameSocket(roomCode: string | undefined) {
 
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${wsProtocol}//${window.location.host}/ws?roomCode=${roomCode}&playerToken=${token}`;
-    
+
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+      wsRef.current.close();
+    }
+
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (unmountedRef.current) {
+        ws.close();
+        return;
+      }
       setIsConnected(true);
       setError(null);
     };
 
     ws.onmessage = (event) => {
+      if (unmountedRef.current) return;
       try {
         const data = JSON.parse(event.data) as IncomingMessage;
         if (data.type === "state") {
@@ -59,21 +70,28 @@ export function useGameSocket(roomCode: string | undefined) {
     };
 
     ws.onclose = () => {
+      if (unmountedRef.current) return;
       setIsConnected(false);
-      // Auto-reconnect
-      setTimeout(() => {
-        connect();
+      reconnectTimerRef.current = setTimeout(() => {
+        if (!unmountedRef.current) connect();
       }, 2000);
     };
 
     ws.onerror = () => {
+      if (unmountedRef.current) return;
       setIsConnected(false);
     };
   }, [roomCode, toast]);
 
   useEffect(() => {
+    unmountedRef.current = false;
     connect();
     return () => {
+      unmountedRef.current = true;
+      if (reconnectTimerRef.current !== null) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       if (wsRef.current) {
         wsRef.current.close();
       }
