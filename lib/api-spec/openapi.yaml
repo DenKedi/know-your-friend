@@ -1,15 +1,16 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Know Your Friend game API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: rooms
+    description: Game room operations
 paths:
   /healthz:
     get:
@@ -24,6 +25,94 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /rooms:
+    post:
+      operationId: createRoom
+      tags: [rooms]
+      summary: Create a new game room
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomBody"
+      responses:
+        "201":
+          description: Room created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinRoomResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rooms/{roomCode}/join:
+    post:
+      operationId: joinRoom
+      tags: [rooms]
+      summary: Join an existing game room
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinRoomBody"
+      responses:
+        "200":
+          description: Joined room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinRoomResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rooms/{roomCode}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get room state
+      parameters:
+        - name: roomCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Room state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomState"
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +123,163 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    CreateRoomBody:
+      type: object
+      properties:
+        hostName:
+          type: string
+        totalRounds:
+          type: integer
+      required:
+        - hostName
+        - totalRounds
+
+    JoinRoomBody:
+      type: object
+      properties:
+        playerName:
+          type: string
+      required:
+        - playerName
+
+    JoinRoomResponse:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        playerId:
+          type: string
+        playerToken:
+          type: string
+      required:
+        - roomCode
+        - playerId
+        - playerToken
+
+    Player:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        score:
+          type: integer
+        isHost:
+          type: boolean
+      required:
+        - id
+        - name
+        - score
+        - isHost
+
+    RoomState:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        status:
+          type: string
+          enum:
+            - waiting
+            - category_selection
+            - self_rating
+            - guessing
+            - round_results
+            - game_over
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        currentRound:
+          type: integer
+        totalRounds:
+          type: integer
+        currentPlayerId:
+          type: ["string", "null"]
+        currentCategory:
+          type: ["string", "null"]
+        currentCategoryLabel:
+          type: ["string", "null"]
+        currentCategoryLeftLabel:
+          type: ["string", "null"]
+        currentCategoryRightLabel:
+          type: ["string", "null"]
+        selfRating:
+          type: ["integer", "null"]
+        guessesSubmitted:
+          type: integer
+        guessesTotal:
+          type: integer
+        roundResults:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/GuessResult"
+        availableCategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+      required:
+        - roomCode
+        - status
+        - players
+        - currentRound
+        - totalRounds
+        - currentPlayerId
+        - currentCategory
+        - currentCategoryLabel
+        - currentCategoryLeftLabel
+        - currentCategoryRightLabel
+        - selfRating
+        - guessesSubmitted
+        - guessesTotal
+        - roundResults
+        - availableCategories
+
+    GuessResult:
+      type: object
+      properties:
+        playerId:
+          type: string
+        playerName:
+          type: string
+        guess:
+          type: integer
+        selfRating:
+          type: integer
+        diff:
+          type: integer
+        points:
+          type: integer
+      required:
+        - playerId
+        - playerName
+        - guess
+        - selfRating
+        - diff
+        - points
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        leftLabel:
+          type: string
+        rightLabel:
+          type: string
+      required:
+        - id
+        - label
+        - leftLabel
+        - rightLabel
