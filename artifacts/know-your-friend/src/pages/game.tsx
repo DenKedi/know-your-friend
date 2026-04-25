@@ -11,6 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const MARKER_COLORS = [
   { bg: "#FF4B8B", text: "#fff" },
@@ -32,6 +42,7 @@ export default function Game() {
   const [sliderValue, setSliderValue] = useState(50);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showStandings, setShowStandings] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   useEffect(() => {
     if (state?.status === "game_over") {
@@ -78,15 +89,21 @@ export default function Game() {
     state.currentPlayerId === state.players[state.players.length - 1]?.id;
 
   const sortedStandings = [...state.players].sort((a, b) => b.score - a.score);
+  const isHost = me?.isHost ?? false;
+  const canEndEarly =
+    isHost &&
+    state.status !== "waiting" &&
+    state.status !== "game_over" &&
+    state.currentRound < state.totalRounds;
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Header */}
-      <header className="px-4 py-3 flex items-center justify-between border-b border-border bg-card shrink-0">
-        <Button variant="ghost" size="sm" onClick={() => setLocation("/")}>
+      <header className="px-4 py-3 flex items-center justify-between border-b border-border bg-card shrink-0 gap-2">
+        <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="px-2">
           Verlassen
         </Button>
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
             Runde {state.currentRound} / {state.totalRounds}
           </span>
@@ -95,13 +112,26 @@ export default function Game() {
             className="w-28 h-1.5"
           />
         </div>
-        <button
-          onClick={() => setShowStandings(true)}
-          className="font-black bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm tabular-nums hover:bg-primary/90 active:scale-95 transition-all"
-          aria-label="Punktestand anzeigen"
-        >
-          {me?.score ?? 0} Pkt
-        </button>
+        <div className="flex items-center gap-1.5">
+          {canEndEarly && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowEndConfirm(true)}
+              className="px-2 text-xs font-bold text-muted-foreground hover:text-destructive"
+              title="Spiel nach dieser Runde beenden"
+            >
+              Abkürzen
+            </Button>
+          )}
+          <button
+            onClick={() => setShowStandings(true)}
+            className="font-black bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm tabular-nums hover:bg-primary/90 active:scale-95 transition-all"
+            aria-label="Punktestand anzeigen"
+          >
+            {me?.score ?? 0} Pkt
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 flex flex-col items-center px-4 py-5 max-w-xl mx-auto w-full overflow-y-auto">
@@ -133,17 +163,24 @@ export default function Game() {
                       <div className="font-black text-lg text-foreground group-hover:text-primary transition-colors">
                         {cat.label}
                       </div>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className="text-xs font-semibold text-primary truncate max-w-[42%]">
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-xs font-semibold text-primary truncate">
                           {cat.leftLabel}
                         </span>
-                        <span className="text-muted-foreground/60 text-xs flex-shrink-0">↔</span>
-                        <span className="text-xs font-semibold text-secondary truncate max-w-[42%] text-right ml-auto">
+                        <span className="text-xs font-semibold text-secondary truncate text-right">
                           {cat.rightLabel}
                         </span>
                       </div>
                     </button>
                   ))}
+                  <Button
+                    variant="outline"
+                    onClick={() => send({ type: "reroll_categories" })}
+                    disabled={state.rerollUsedThisTurn}
+                    className="w-full mt-1 font-bold"
+                  >
+                    {state.rerollUsedThisTurn ? "🎲 Schon neu gewürfelt" : "🎲 Andere Kategorien"}
+                  </Button>
                 </div>
               ) : (
                 <div className="py-8 flex flex-col items-center gap-4">
@@ -371,6 +408,29 @@ export default function Game() {
           </div>
         )}
       </main>
+
+      {/* ── ABKÜRZEN-BESTÄTIGUNG ───────────────────────────────── */}
+      <AlertDialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Spiel abkürzen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Runde wird noch zu Ende gespielt – danach ist Schluss und ihr seht das Endergebnis.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Doch nicht</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                send({ type: "end_game_early" });
+                setShowEndConfirm(false);
+              }}
+            >
+              Ja, abkürzen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── PUNKTESTAND-DIALOG ──────────────────────────────────── */}
       <Dialog open={showStandings} onOpenChange={setShowStandings}>

@@ -7,7 +7,9 @@ type OutgoingMessage =
   | { type: "select_category"; categoryId: string }
   | { type: "submit_self_rating"; rating: number }
   | { type: "submit_guess"; guess: number }
-  | { type: "next_turn" };
+  | { type: "next_turn" }
+  | { type: "reroll_categories" }
+  | { type: "end_game_early" };
 
 type IncomingMessage =
   | { type: "state"; state: RoomState }

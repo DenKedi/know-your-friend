@@ -42,6 +42,7 @@ export interface Room {
   guesses: Map<string, number>;
   roundResults: GuessResult[] | null;
   usedCategoryIds: Set<string>;
+  rerollUsedThisTurn: boolean;
 }
 
 
@@ -102,6 +103,7 @@ export function createRoom(hostName: string, totalRounds: number): { room: Room;
     guesses: new Map(),
     roundResults: null,
     usedCategoryIds: new Set(),
+    rerollUsedThisTurn: false,
   };
 
   rooms.set(code, room);
@@ -147,7 +149,34 @@ export function startGame(room: Room): boolean {
   room.currentRound = 1;
   room.currentPlayerIndex = 0;
   room.usedCategoryIds = new Set();
+  room.rerollUsedThisTurn = false;
   pickCategoriesForTurn(room);
+  return true;
+}
+
+/**
+ * Re-roll the 3 available categories for the current turn.
+ * Allowed only once per turn, only during category_selection.
+ * Returns false if not allowed.
+ */
+export function rerollCategories(room: Room): boolean {
+  if (room.status !== "category_selection") return false;
+  if (room.rerollUsedThisTurn) return false;
+  room.rerollUsedThisTurn = true;
+  pickCategoriesForTurn(room);
+  return true;
+}
+
+/**
+ * Host shortcut: end the game after the current round finishes.
+ * Achieved by setting totalRounds = currentRound, so the natural
+ * round-completion logic in nextTurn() will trigger game_over.
+ */
+export function endGameAfterCurrentRound(room: Room): boolean {
+  if (room.status === "waiting" || room.status === "game_over") return false;
+  if (room.currentRound < 1) return false;
+  if (room.totalRounds <= room.currentRound) return false;
+  room.totalRounds = room.currentRound;
   return true;
 }
 
@@ -238,6 +267,7 @@ export function nextTurn(room: Room): boolean {
   room.selfRating = null;
   room.guesses = new Map();
   room.roundResults = null;
+  room.rerollUsedThisTurn = false;
   pickCategoriesForTurn(room);
   return true;
 }
@@ -285,6 +315,7 @@ export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
     pendingGuesserIds,
     roundResults: room.roundResults,
     availableCategories: room.currentAvailableCategories,
+    rerollUsedThisTurn: room.rerollUsedThisTurn,
   };
 }
 

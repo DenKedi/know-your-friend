@@ -124,19 +124,23 @@ export function GameSlider({
         <div
           ref={trackRef}
           className={cn(
-            "absolute left-[6%] right-[6%] h-4 rounded-full bg-input cursor-pointer shadow-inner",
-            disabled && "cursor-default"
+            "absolute left-[6%] right-[6%] h-4 rounded-full cursor-pointer shadow-inner overflow-hidden",
+            disabled
+              ? "cursor-default bg-gradient-to-r from-primary/70 to-secondary/70"
+              : "bg-input"
           )}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         >
-          {/* Fill */}
-          <div
-            className="absolute left-0 top-0 bottom-0 rounded-full bg-gradient-to-r from-primary to-secondary pointer-events-none transition-all duration-150"
-            style={{ width: `${localValue}%` }}
-          />
+          {/* Active fill — only when interactive */}
+          {!disabled && (
+            <div
+              className="absolute left-0 top-0 bottom-0 rounded-full bg-gradient-to-r from-primary to-secondary pointer-events-none transition-all duration-150"
+              style={{ width: `${localValue}%` }}
+            />
+          )}
 
           {/* Tick marks for guess markers on track */}
           {guessMarkers.map((marker, i) => {

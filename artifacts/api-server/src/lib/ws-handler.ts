@@ -10,6 +10,8 @@ import {
   submitSelfRating,
   submitGuess,
   nextTurn,
+  rerollCategories,
+  endGameAfterCurrentRound,
   getRoomStateForClient,
 } from "./game-engine";
 
@@ -162,9 +164,40 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
           break;
         }
         case "next_turn": {
+          // If someone else already advanced the turn (race condition where
+          // multiple players hit "Weiter" at once), silently ignore instead
+          // of showing a misleading "Cannot advance turn" error.
+          if (currentRoom.status !== "round_results") {
+            return;
+          }
           const ok = nextTurn(currentRoom);
           if (!ok) {
-            ws.send(JSON.stringify({ type: "error", message: "Cannot advance turn" }));
+            return;
+          }
+          broadcastState(roomCode);
+          break;
+        }
+        case "reroll_categories": {
+          if (activeTurnPlayer?.id !== currentPlayer.id) {
+            ws.send(JSON.stringify({ type: "error", message: "Nur der aktuelle Spieler kann neu würfeln" }));
+            return;
+          }
+          const ok = rerollCategories(currentRoom);
+          if (!ok) {
+            ws.send(JSON.stringify({ type: "error", message: "Du hast in dieser Runde schon neu gewürfelt" }));
+            return;
+          }
+          broadcastState(roomCode);
+          break;
+        }
+        case "end_game_early": {
+          if (!currentPlayer.isHost) {
+            ws.send(JSON.stringify({ type: "error", message: "Nur der Host kann das Spiel abkürzen" }));
+            return;
+          }
+          const ok = endGameAfterCurrentRound(currentRoom);
+          if (!ok) {
+            ws.send(JSON.stringify({ type: "error", message: "Spiel kann gerade nicht abgekürzt werden" }));
             return;
           }
           broadcastState(roomCode);

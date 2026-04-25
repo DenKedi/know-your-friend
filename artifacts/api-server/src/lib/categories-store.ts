@@ -60,6 +60,8 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: "risikofreudig", label: "Risikobereitschaft", leftLabel: "Sicherheitsbewusst", rightLabel: "Adrenalin-Junkie" },
   { id: "natural_op", label: "Schönheitsideal", leftLabel: "Natural Beauty", rightLabel: "Schönheits-OP" },
   { id: "intellekt", label: "Intellektualität", leftLabel: "Bauchmensch", rightLabel: "Kopfmensch" },
+  { id: "qual_quant", label: "Qualität vs. Quantität", leftLabel: "Hauptsache viel", rightLabel: "Hauptsache gut" },
+  { id: "emoji_text", label: "Schreibstil", leftLabel: "Nur Buchstaben", rightLabel: "Voller Emojis" },
 ];
 
 let cache: Category[] = [...DEFAULT_CATEGORIES];
