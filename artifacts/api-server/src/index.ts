@@ -3,6 +3,7 @@ import { WebSocketServer } from "ws";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { attachWebSocketServer } from "./lib/ws-handler";
+import { loadCategories } from "./lib/categories-store";
 
 const rawPort = process.env["PORT"];
 
@@ -18,11 +19,20 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const server = createServer(app);
+async function main(): Promise<void> {
+  await loadCategories();
 
-const wss = new WebSocketServer({ server, path: "/ws" });
-attachWebSocketServer(wss);
+  const server = createServer(app);
 
-server.listen(port, () => {
-  logger.info({ port }, "Server listening");
+  const wss = new WebSocketServer({ server, path: "/ws" });
+  attachWebSocketServer(wss);
+
+  server.listen(port, () => {
+    logger.info({ port }, "Server listening");
+  });
+}
+
+main().catch((err) => {
+  logger.error({ err }, "Server failed to start");
+  process.exit(1);
 });

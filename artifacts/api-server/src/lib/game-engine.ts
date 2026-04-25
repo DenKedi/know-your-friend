@@ -1,11 +1,7 @@
 import { randomBytes } from "crypto";
+import { getCategories, type Category } from "./categories-store";
 
-export interface Category {
-  id: string;
-  label: string;
-  leftLabel: string;
-  rightLabel: string;
-}
+export type { Category };
 
 export interface Player {
   id: string;
@@ -48,36 +44,6 @@ export interface Room {
   usedCategoryIds: Set<string>;
 }
 
-export const CATEGORIES: Category[] = [
-  { id: "wildnis", label: "Wildnisüberleben", leftLabel: "Stadtmensch", rightLabel: "Survivalist" },
-  { id: "gluecksspiel", label: "Glücksspiel", leftLabel: "Kein Interesse", rightLabel: "Immer dabei" },
-  { id: "drogen", label: "Drogenaffinität", leftLabel: "Nüchtern", rightLabel: "Experimentierfreudig" },
-  { id: "alkohol", label: "Alkohol", leftLabel: "Abstinent", rightLabel: "Partyprofi" },
-  { id: "gruener_daumen", label: "Grüner Daumen", leftLabel: "Pflanzenmörder", rightLabel: "Gärtner-Guru" },
-  { id: "reisen", label: "Reiselust", leftLabel: "Stubenhocker", rightLabel: "Weltenbummler" },
-  { id: "essen", label: "Essgewohnheiten", leftLabel: "Schlicht & einfach", rightLabel: "Foodie" },
-  { id: "kochen", label: "Kochkünste", leftLabel: "Tiefkühlprofi", rightLabel: "Sternekoch" },
-  { id: "kultur", label: "Kulturliebe", leftLabel: "Kulturmuffel", rightLabel: "Kulturfanatiker" },
-  { id: "natur", label: "Naturverbundenheit", leftLabel: "Stadtmensch", rightLabel: "Naturkind" },
-  { id: "stadt_land", label: "Stadt oder Land", leftLabel: "Großstädter", rightLabel: "Landei" },
-  { id: "fahrstil", label: "Fahrstil", leftLabel: "Vorsichtiger Fahrer", rightLabel: "Rennfahrer" },
-  { id: "fast_food", label: "Fast Food", leftLabel: "Nie im Leben", rightLabel: "Fast täglich" },
-  { id: "gesetzestreu", label: "Gesetzstreue", leftLabel: "Rebell", rightLabel: "Regelfreak" },
-  { id: "tierlieb", label: "Tierliebe", leftLabel: "Tierphobisch", rightLabel: "Tiernarr" },
-  { id: "diy", label: "Do it yourself", leftLabel: "Kaufe lieber fertig", rightLabel: "Bastler" },
-  { id: "wasserratte", label: "Wasserverbundenheit", leftLabel: "Wasserphobisch", rightLabel: "Wasserratte" },
-  { id: "strand_berge", label: "Urlaubstyp", leftLabel: "Strandlieger", rightLabel: "Bergsteiger" },
-  { id: "streber", label: "Streber-Faktor", leftLabel: "Chillt gerne", rightLabel: "Vollstreber" },
-  { id: "katzen_hunde", label: "Haustiertyp", leftLabel: "Katzenkind", rightLabel: "Hundemensch" },
-  { id: "politik", label: "Politische Einstellung", leftLabel: "Links", rightLabel: "Rechts" },
-  { id: "treue", label: "Treue", leftLabel: "Fremdgeher", rightLabel: "Absolut treu" },
-  { id: "markenklamotten", label: "Markenbewusstsein", leftLabel: "Hauptsache günstig", rightLabel: "Labelqueen" },
-  { id: "introvert_extrovert", label: "Introversion", leftLabel: "Introvertiert", rightLabel: "Extrovertiert" },
-  { id: "hobbyhorsing", label: "Hobbyhorsing", leftLabel: "Was ist das?", rightLabel: "Vollprofi" },
-  { id: "leichtglaeubbig", label: "Leichtgläubigkeit", leftLabel: "Skeptiker", rightLabel: "Glaubt alles" },
-  { id: "orientierung", label: "Orientierungssinn", leftLabel: "Verläuft sich ständig", rightLabel: "Menschliches GPS" },
-  { id: "offline_online", label: "Online-Zeit", leftLabel: "Digital Detox", rightLabel: "Always Online" },
-];
 
 const rooms = new Map<string, Room>();
 
@@ -94,7 +60,13 @@ function generateToken(): string {
 }
 
 function pickCategoriesForTurn(room: Room): void {
-  const remaining = CATEGORIES.filter((c) => !room.usedCategoryIds.has(c.id));
+  const all = getCategories();
+  let remaining = all.filter((c) => !room.usedCategoryIds.has(c.id));
+  // If we've exhausted them all (e.g., long game), reset the used pool so the game can continue.
+  if (remaining.length === 0) {
+    room.usedCategoryIds = new Set();
+    remaining = all;
+  }
   const shuffled = [...remaining].sort(() => Math.random() - 0.5);
   room.currentAvailableCategories = shuffled.slice(0, Math.min(3, shuffled.length));
 }
@@ -182,7 +154,7 @@ export function startGame(room: Room): boolean {
 export function selectCategory(room: Room, categoryId: string): boolean {
   if (room.status !== "category_selection") return false;
 
-  const category = CATEGORIES.find((c) => c.id === categoryId);
+  const category = getCategories().find((c) => c.id === categoryId);
   if (!category) return false;
 
   room.currentCategory = category;
@@ -270,8 +242,21 @@ export function nextTurn(room: Room): boolean {
   return true;
 }
 
-export function getRoomStateForClient(room: Room, viewerPlayerId?: string) {
+export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
   const currentPlayer = room.players[room.currentPlayerIndex];
+
+  // Determine who has and hasn't submitted (during guessing phase)
+  const guessedPlayerIds = Array.from(room.guesses.keys());
+  const pendingGuesserIds = room.players
+    .filter((p) => p.id !== currentPlayer?.id && !room.guesses.has(p.id))
+    .map((p) => p.id);
+
+  // Who is the next rated player (the one taking the next turn)?
+  const nextPlayerIndex = room.currentPlayerIndex + 1;
+  const nextRatedPlayer =
+    nextPlayerIndex < room.players.length
+      ? room.players[nextPlayerIndex]
+      : room.players[0];
 
   return {
     roomCode: room.code,
@@ -285,13 +270,19 @@ export function getRoomStateForClient(room: Room, viewerPlayerId?: string) {
     currentRound: room.currentRound,
     totalRounds: room.totalRounds,
     currentPlayerId: currentPlayer?.id ?? null,
+    nextPlayerId: nextRatedPlayer?.id ?? null,
     currentCategory: room.currentCategory?.id ?? null,
     currentCategoryLabel: room.currentCategory?.label ?? null,
     currentCategoryLeftLabel: room.currentCategory?.leftLabel ?? null,
     currentCategoryRightLabel: room.currentCategory?.rightLabel ?? null,
-    selfRating: room.status === "round_results" || room.status === "game_over" ? room.selfRating : null,
+    selfRating:
+      room.status === "round_results" || room.status === "game_over"
+        ? room.selfRating
+        : null,
     guessesSubmitted: room.guesses.size,
     guessesTotal: Math.max(0, room.players.length - 1),
+    guessedPlayerIds,
+    pendingGuesserIds,
     roundResults: room.roundResults,
     availableCategories: room.currentAvailableCategories,
   };

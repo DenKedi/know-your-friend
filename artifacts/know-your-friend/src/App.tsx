@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import Lobby from "@/pages/lobby";
 import Game from "@/pages/game";
 import Results from "@/pages/results";
+import Admin from "@/pages/admin";
 
 const queryClient = new QueryClient();
 
@@ -14,6 +15,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/admin" component={Admin} />
       <Route path="/room/:code/lobby" component={Lobby} />
       <Route path="/room/:code/game" component={Game} />
       <Route path="/room/:code/results" component={Results} />

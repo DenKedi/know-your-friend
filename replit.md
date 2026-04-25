@@ -34,8 +34,10 @@ A real-time multiplayer party game at `/`.
 
 - **Frontend**: React + Vite at `artifacts/know-your-friend/`
 - **Backend**: Express + WebSocket at `artifacts/api-server/`
-- **Game state**: In-memory (ephemeral party sessions, no DB needed)
+- **Game state**: In-memory (ephemeral party sessions)
+- **Categories**: Persisted in PostgreSQL (`categories` table); cached in memory (`categories-store.ts`), refreshed on every mutation
 - **Real-time**: WebSocket at `/ws?roomCode=CODE&playerToken=TOKEN`
+- **Admin UI**: `/admin` — live add/edit/delete/reset of categories (no auth in v1)
 
 ### Game Flow
 

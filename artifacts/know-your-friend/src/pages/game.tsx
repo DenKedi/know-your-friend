@@ -5,6 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GameSlider } from "@/components/game-slider";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const MARKER_COLORS = [
   { bg: "#FF4B8B", text: "#fff" },
@@ -14,6 +20,10 @@ const MARKER_COLORS = [
   { bg: "#FF6B35", text: "#fff" },
 ];
 
+function colorForIndex(i: number) {
+  return MARKER_COLORS[i % MARKER_COLORS.length]!;
+}
+
 export default function Game() {
   const [match, params] = useRoute("/room/:code/game");
   const roomCode = params?.code;
@@ -21,6 +31,7 @@ export default function Game() {
   const { state, send } = useGameSocket(roomCode);
   const [sliderValue, setSliderValue] = useState(50);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [showStandings, setShowStandings] = useState(false);
 
   useEffect(() => {
     if (state?.status === "game_over") {
@@ -41,6 +52,7 @@ export default function Game() {
   const me = state.players.find((p) => p.id === playerId);
   const isCurrentPlayer = state.currentPlayerId === playerId;
   const currentPlayer = state.players.find((p) => p.id === state.currentPlayerId);
+  const nextPlayer = state.players.find((p) => p.id === state.nextPlayerId);
 
   const handleSelectCategory = (categoryId: string) => {
     send({ type: "select_category", categoryId });
@@ -65,6 +77,8 @@ export default function Game() {
     state.players.length > 0 &&
     state.currentPlayerId === state.players[state.players.length - 1]?.id;
 
+  const sortedStandings = [...state.players].sort((a, b) => b.score - a.score);
+
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Header */}
@@ -81,9 +95,13 @@ export default function Game() {
             className="w-28 h-1.5"
           />
         </div>
-        <div className="font-black bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm tabular-nums">
+        <button
+          onClick={() => setShowStandings(true)}
+          className="font-black bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm tabular-nums hover:bg-primary/90 active:scale-95 transition-all"
+          aria-label="Punktestand anzeigen"
+        >
           {me?.score ?? 0} Pkt
-        </div>
+        </button>
       </header>
 
       <main className="flex-1 flex flex-col items-center px-4 py-5 max-w-xl mx-auto w-full overflow-y-auto">
@@ -128,7 +146,7 @@ export default function Game() {
                   ))}
                 </div>
               ) : (
-                <div className="py-10 flex flex-col items-center gap-4">
+                <div className="py-8 flex flex-col items-center gap-4">
                   <div className="w-14 h-14 rounded-full border-4 border-primary border-t-transparent animate-spin" />
                   <p className="text-sm text-muted-foreground font-semibold">Bitte warten…</p>
                 </div>
@@ -174,14 +192,14 @@ export default function Game() {
                     <div className="py-10 text-center space-y-2">
                       <div className="text-4xl font-black text-primary">{sliderValue}</div>
                       <p className="text-muted-foreground font-semibold">
-                        Versteckt – deine Freunde raten gerade…
+                        Versteckt – deine Freunde raten gleich…
                       </p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             ) : (
-              <div className="flex justify-center py-16">
+              <div className="flex justify-center py-10">
                 <div className="w-20 h-20 rounded-full border-8 border-primary border-t-transparent animate-spin" />
               </div>
             )}
@@ -222,7 +240,7 @@ export default function Game() {
                       </Button>
                     </>
                   ) : (
-                    <div className="py-10 text-center space-y-2">
+                    <div className="py-6 text-center space-y-2">
                       <div className="text-4xl font-black text-primary">
                         {state.guessesSubmitted}/{state.guessesTotal}
                       </div>
@@ -232,7 +250,7 @@ export default function Game() {
                     </div>
                   )
                 ) : (
-                  <div className="py-10 flex flex-col items-center gap-3">
+                  <div className="py-6 flex flex-col items-center gap-3">
                     <div className="text-5xl font-black text-primary tabular-nums">
                       {state.guessesSubmitted}/{state.guessesTotal}
                     </div>
@@ -251,6 +269,9 @@ export default function Game() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Wer fehlt noch? */}
+            <PendingGuessersCard state={state} />
           </div>
         )}
 
@@ -298,10 +319,9 @@ export default function Game() {
               {[...state.roundResults]
                 .sort((a, b) => b.points - a.points)
                 .map((r, i) => {
-                  const color = MARKER_COLORS[
-                    state.roundResults!.findIndex((x) => x.playerId === r.playerId) %
-                      MARKER_COLORS.length
-                  ];
+                  const color = colorForIndex(
+                    state.roundResults!.findIndex((x) => x.playerId === r.playerId),
+                  );
                   return (
                     <div
                       key={r.playerId}
@@ -334,9 +354,16 @@ export default function Game() {
                 })}
             </div>
 
+            {/* Next-up hint */}
+            {!isLastTurn && nextPlayer && (
+              <div className="text-center text-sm text-muted-foreground">
+                Als Nächstes ist <span className="font-bold text-foreground">{nextPlayer.name}</span> dran
+              </div>
+            )}
+
             {/* Next button – anyone can advance */}
             <Button
-              className="w-full py-6 text-lg font-black rounded-xl mt-2"
+              className="w-full py-6 text-lg font-black rounded-xl mt-1"
               onClick={handleNextTurn}
             >
               {isLastTurn ? "Spiel beenden" : "Weiter"}
@@ -344,6 +371,116 @@ export default function Game() {
           </div>
         )}
       </main>
+
+      {/* ── PUNKTESTAND-DIALOG ──────────────────────────────────── */}
+      <Dialog open={showStandings} onOpenChange={setShowStandings}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight text-center">
+              Punktestand
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-2">
+            {sortedStandings.map((p, i) => {
+              const originalIdx = state.players.findIndex((pl) => pl.id === p.id);
+              const color = colorForIndex(originalIdx);
+              const isMe = p.id === playerId;
+              return (
+                <div
+                  key={p.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${
+                    isMe ? "border-primary bg-primary/5" : "border-border bg-card"
+                  }`}
+                >
+                  <div className="w-7 text-center font-black text-muted-foreground tabular-nums">
+                    {i + 1}.
+                  </div>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
+                    style={{ background: color.bg, color: color.text }}
+                  >
+                    {p.name.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0 font-bold truncate">
+                    {p.name} {isMe && <span className="text-xs text-muted-foreground font-normal">(du)</span>}
+                  </div>
+                  <div className="font-black text-lg text-primary tabular-nums">
+                    {p.score}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function PendingGuessersCard({
+  state,
+}: {
+  state: {
+    players: { id: string; name: string }[];
+    pendingGuesserIds?: string[];
+    guessedPlayerIds?: string[];
+    nextPlayerId?: string | null;
+    currentPlayerId?: string | null;
+  };
+}) {
+  const pending = (state.pendingGuesserIds ?? []).map((id) =>
+    state.players.find((p) => p.id === id),
+  ).filter(Boolean) as { id: string; name: string }[];
+  const guessed = (state.guessedPlayerIds ?? []).map((id) =>
+    state.players.find((p) => p.id === id),
+  ).filter(Boolean) as { id: string; name: string }[];
+  const nextPlayer = state.players.find((p) => p.id === state.nextPlayerId);
+
+  if (pending.length === 0 && guessed.length === 0) return null;
+
+  return (
+    <Card className="border border-border">
+      <CardContent className="px-4 py-3 space-y-2">
+        {pending.length > 0 && (
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1">
+              Noch offen
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {pending.map((p) => (
+                <span
+                  key={p.id}
+                  className="text-xs font-bold px-2.5 py-1 rounded-full bg-input text-foreground border border-border"
+                >
+                  ⏳ {p.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {guessed.length > 0 && (
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1">
+              Fertig
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {guessed.map((p) => (
+                <span
+                  key={p.id}
+                  className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/15 text-primary border border-primary/30"
+                >
+                  ✓ {p.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {nextPlayer && nextPlayer.id !== state.currentPlayerId && (
+          <div className="pt-1 text-xs text-muted-foreground">
+            Als Nächstes dran: <span className="font-bold text-foreground">{nextPlayer.name}</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
