@@ -157,22 +157,22 @@ export function GameSlider({
           {/* Truth tick on track */}
           {truthMarker && (
             <div
-              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-8 rounded-full bg-white pointer-events-none z-10"
+              className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-6 rounded-sm bg-white pointer-events-none z-10"
               style={{ left: `${truthMarker.value}%` }}
             />
           )}
-
-          {/* Draggable thumb */}
-          {!disabled && (
-            <div
-              className={cn(
-                "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 bg-white rounded-full shadow-[0_0_15px_rgba(0,0,0,0.4)] border-4 border-primary transition-transform pointer-events-none z-20",
-                isDragging && "scale-125"
-              )}
-              style={{ left: `${localValue}%` }}
-            />
-          )}
         </div>
+
+        {/* Draggable thumb — outside the clipped track so it isn't cropped */}
+        {!disabled && (
+          <div
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 bg-white rounded-full shadow-[0_0_15px_rgba(0,0,0,0.4)] border-4 border-primary transition-transform pointer-events-none z-20",
+              isDragging && "scale-125"
+            )}
+            style={{ left: `calc(${localValue}% * 0.88 + 6%)` }}
+          />
+        )}
       </div>
 
       {/* Value display */}
