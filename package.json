@@ -8,10 +8,17 @@
     "dev:api": "PORT=7184 corepack pnpm --filter @workspace/api-server run dev",
     "dev:frontend": "PORT=7183 BASE_PATH=/ corepack pnpm --filter @workspace/know-your-friend run dev",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "build:api": "pnpm run typecheck:libs && pnpm --filter @workspace/api-server... run build",
+    "start": "node --enable-source-maps artifacts/api-server/dist/index.mjs",
+    "heroku-postbuild": "pnpm run build:api",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "pnpm@10.11.1",
   "devDependencies": {
     "concurrently": "^9.2.1",
     "dotenv-cli": "^8.0.0",
