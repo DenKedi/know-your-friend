@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { apiUrl } from "@/lib/api-base";
 
 interface Category {
   id: string;
@@ -12,7 +13,7 @@ interface Category {
   rightLabel: string;
 }
 
-const API_BASE = `${import.meta.env.BASE_URL}api`;
+const API_BASE = apiUrl("/api");
 
 export default function Admin() {
   const { toast } = useToast();

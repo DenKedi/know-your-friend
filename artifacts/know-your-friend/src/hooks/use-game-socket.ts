@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { RoomState } from "@workspace/api-client-react";
+import { wsUrl } from "../lib/api-base";
 import { useToast } from "./use-toast";
 
 export type GameRoomState = RoomState & {
@@ -40,14 +41,13 @@ export function useGameSocket(roomCode: string | undefined) {
       return;
     }
 
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws?roomCode=${roomCode}&playerToken=${token}`;
+    const url = `${wsUrl("/ws")}?roomCode=${roomCode}&playerToken=${token}`;
 
     if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
       wsRef.current.close();
     }
 
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {
