@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LANGUAGE_OPTIONS, getLanguageOption, useI18n } from "@/lib/i18n";
+import { LANGUAGE_OPTIONS, useI18n } from "@/lib/i18n";
+import { Flag } from "@/components/flag";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -90,16 +91,7 @@ export default function Home() {
         </CardHeader>
 
         <CardContent className="px-6 pb-8 space-y-5">
-          <div className="space-y-2">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {t("home.languageLabel")}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {t("home.languageHint")}
-              </div>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-3 justify-center">
               {LANGUAGE_OPTIONS.map((option) => {
                 const active = option.code === language;
                 return (
@@ -107,23 +99,19 @@ export default function Home() {
                     key={option.code}
                     type="button"
                     onClick={() => setLanguage(option.code)}
-                    className={`min-w-[74px] rounded-2xl border px-3 py-2 text-sm font-bold transition-colors ${
+                    className={`overflow-hidden rounded-[4px] transition-all ${
                       active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-input text-foreground"
+                        ? "outline outline-2 outline-primary"
+                        : "opacity-75 hover:opacity-100"
                     }`}
                     aria-pressed={active}
+                    aria-label={option.label}
                     title={option.label}
                   >
-                    <div className="text-lg leading-none">{option.flag}</div>
-                    <div className="mt-1 text-[11px] uppercase tracking-wide">{option.code}</div>
+                    <Flag code={option.code} className="block h-7 w-11" />
                   </button>
                 );
               })}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {t("lobby.roomLanguage", { language: `${getLanguageOption(language).flag} ${getLanguageOption(language).label}` })}
-            </div>
           </div>
 
           <div className="space-y-1.5">

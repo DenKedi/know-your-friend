@@ -7,12 +7,55 @@ import {
 } from "react";
 
 export const LANGUAGE_OPTIONS = [
-  { code: "en", flag: "🇬🇧", label: "English" },
-  { code: "de", flag: "🇩🇪", label: "Deutsch" },
-  { code: "fr", flag: "🇫🇷", label: "Français" },
-  { code: "es", flag: "🇪🇸", label: "Español" },
-  { code: "it", flag: "🇮🇹", label: "Italiano" },
-  { code: "ru", flag: "🇷🇺", label: "Русский" },
+  {
+    code: "en",
+    flag: "🇬🇧",
+    label: "English",
+    flagStyle: {
+      background:
+        "linear-gradient(0deg, transparent 44%, #c8102e 44%, #c8102e 56%, transparent 56%), linear-gradient(90deg, transparent 46%, #c8102e 46%, #c8102e 54%, transparent 54%), linear-gradient(0deg, transparent 39%, #ffffff 39%, #ffffff 61%, transparent 61%), linear-gradient(90deg, transparent 43%, #ffffff 43%, #ffffff 57%, transparent 57%), linear-gradient(90deg, #0a2f6f 0%, #0a2f6f 100%)",
+    },
+  },
+  {
+    code: "de",
+    flag: "🇩🇪",
+    label: "Deutsch",
+    flagStyle: {
+      background: "linear-gradient(180deg, #111111 0 33.333%, #d00 33.333% 66.666%, #ffce00 66.666% 100%)",
+    },
+  },
+  {
+    code: "fr",
+    flag: "🇫🇷",
+    label: "Français",
+    flagStyle: {
+      background: "linear-gradient(90deg, #0055a4 0 33.333%, #ffffff 33.333% 66.666%, #ef4135 66.666% 100%)",
+    },
+  },
+  {
+    code: "es",
+    flag: "🇪🇸",
+    label: "Español",
+    flagStyle: {
+      background: "linear-gradient(180deg, #aa151b 0 25%, #f1bf00 25% 75%, #aa151b 75% 100%)",
+    },
+  },
+  {
+    code: "it",
+    flag: "🇮🇹",
+    label: "Italiano",
+    flagStyle: {
+      background: "linear-gradient(90deg, #009246 0 33.333%, #ffffff 33.333% 66.666%, #ce2b37 66.666% 100%)",
+    },
+  },
+  {
+    code: "ru",
+    flag: "🇷🇺",
+    label: "Русский",
+    flagStyle: {
+      background: "linear-gradient(180deg, #ffffff 0 33.333%, #0039a6 33.333% 66.666%, #d52b1e 66.666% 100%)",
+    },
+  },
 ] as const;
 
 export type LanguageCode = (typeof LANGUAGE_OPTIONS)[number]["code"];
@@ -30,7 +73,7 @@ const messages: Record<LanguageCode, Record<string, TranslationValue>> = {
     "common.loading": "Loading...",
     "common.error": "Error",
     "common.you": "you",
-    "home.tagline": "The game of wild assumptions",
+    "home.tagline": "A competitive friendship game",
     "home.languageLabel": "Language",
     "home.languageHint": "This sets the website and game language for new rooms.",
     "home.nameLabel": "Your name",
@@ -132,7 +175,7 @@ const messages: Record<LanguageCode, Record<string, TranslationValue>> = {
     "common.loading": "Lade...",
     "common.error": "Fehler",
     "common.you": "du",
-    "home.tagline": "Das Spiel der verrückten Annahmen",
+    "home.tagline": "Ein kompetitives Freundschaftsspiel",
     "home.languageLabel": "Sprache",
     "home.languageHint": "Das setzt Website- und Spielsprache für neue Räume.",
     "home.nameLabel": "Dein Name",
@@ -234,7 +277,7 @@ const messages: Record<LanguageCode, Record<string, TranslationValue>> = {
     "common.loading": "Chargement...",
     "common.error": "Erreur",
     "common.you": "toi",
-    "home.tagline": "Le jeu des suppositions folles",
+    "home.tagline": "Un jeu d'amitié compétitif",
     "home.languageLabel": "Langue",
     "home.languageHint": "Définit la langue du site et des nouvelles parties.",
     "home.nameLabel": "Ton nom",
@@ -336,7 +379,7 @@ const messages: Record<LanguageCode, Record<string, TranslationValue>> = {
     "common.loading": "Cargando...",
     "common.error": "Error",
     "common.you": "tú",
-    "home.tagline": "El juego de las suposiciones locas",
+    "home.tagline": "Un juego de amistad competitivo",
     "home.languageLabel": "Idioma",
     "home.languageHint": "Esto define el idioma del sitio y de las nuevas partidas.",
     "home.nameLabel": "Tu nombre",
@@ -438,7 +481,7 @@ const messages: Record<LanguageCode, Record<string, TranslationValue>> = {
     "common.loading": "Caricamento...",
     "common.error": "Errore",
     "common.you": "tu",
-    "home.tagline": "Il gioco delle supposizioni folli",
+    "home.tagline": "Un gioco di amicizia competitivo",
     "home.languageLabel": "Lingua",
     "home.languageHint": "Imposta la lingua del sito e delle nuove partite.",
     "home.nameLabel": "Il tuo nome",
@@ -540,7 +583,7 @@ const messages: Record<LanguageCode, Record<string, TranslationValue>> = {
     "common.loading": "Загрузка...",
     "common.error": "Ошибка",
     "common.you": "ты",
-    "home.tagline": "Игра безумных предположений",
+    "home.tagline": "Соревновательная игра для друзей",
     "home.languageLabel": "Язык",
     "home.languageHint": "Это задает язык сайта и новых игр.",
     "home.nameLabel": "Твое имя",
