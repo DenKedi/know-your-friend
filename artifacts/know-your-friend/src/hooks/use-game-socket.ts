@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { RoomState } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { RoomState } from "@workspace/api-client-react";
 import { useToast } from "./use-toast";
+
+export type GameRoomState = RoomState & {
+  nextPlayerId?: string | null;
+  rerollUsedThisTurn?: boolean;
+  pendingGuesserIds?: string[];
+  guessedPlayerIds?: string[];
+};
 
 type OutgoingMessage =
   | { type: "start_game" }
@@ -12,11 +19,11 @@ type OutgoingMessage =
   | { type: "end_game_early" };
 
 type IncomingMessage =
-  | { type: "state"; state: RoomState }
+  | { type: "state"; state: GameRoomState }
   | { type: "error"; message: string };
 
 export function useGameSocket(roomCode: string | undefined) {
-  const [state, setState] = useState<RoomState | null>(null);
+  const [state, setState] = useState<GameRoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);

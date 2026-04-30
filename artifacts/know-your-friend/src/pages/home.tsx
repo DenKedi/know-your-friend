@@ -29,7 +29,11 @@ export default function Home() {
           setLocation(`/room/${data.roomCode}/lobby`);
         },
         onError: (err) => {
-          toast({ title: "Raum konnte nicht erstellt werden", description: err.error?.error, variant: "destructive" });
+          toast({
+            title: "Raum konnte nicht erstellt werden",
+            description: err instanceof Error ? err.message : "Unbekannter Fehler",
+            variant: "destructive",
+          });
         },
       }
     );
@@ -53,7 +57,11 @@ export default function Home() {
           setLocation(`/room/${data.roomCode}/lobby`);
         },
         onError: (err) => {
-          toast({ title: "Raum konnte nicht betreten werden", description: err.error?.error, variant: "destructive" });
+          toast({
+            title: "Raum konnte nicht betreten werden",
+            description: err instanceof Error ? err.message : "Unbekannter Fehler",
+            variant: "destructive",
+          });
         },
       }
     );
