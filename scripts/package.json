@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "import-categories": "tsx ./src/import-categories.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "mongodb": "^6.20.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",

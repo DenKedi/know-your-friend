@@ -1,8 +1,4 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "./schema";
-
-const { Pool } = pg;
+import { MongoClient, ServerApiVersion, type Db } from "mongodb";
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -10,7 +6,29 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
+const parsedDatabaseName = (() => {
+  try {
+    const { pathname } = new URL(process.env.DATABASE_URL);
+    const databaseName = pathname.replace(/^\//, "").trim();
+    return databaseName.length > 0 ? databaseName : null;
+  } catch {
+    return null;
+  }
+})();
 
-export * from "./schema";
+export const databaseName =
+  process.env.DATABASE_NAME ?? parsedDatabaseName ?? "know-your-friend";
+
+export const client = new MongoClient(process.env.DATABASE_URL, {
+  serverApi: ServerApiVersion.v1,
+});
+
+let databasePromise: Promise<Db> | null = null;
+
+export function getDb(): Promise<Db> {
+  if (!databasePromise) {
+    databasePromise = client.connect().then(() => client.db(databaseName));
+  }
+
+  return databasePromise;
+}

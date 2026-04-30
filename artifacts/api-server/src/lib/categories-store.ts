@@ -1,4 +1,4 @@
-import { pool } from "./db";
+import { getDb } from "./db";
 import { logger } from "./logger";
 
 export interface Category {
@@ -6,6 +6,11 @@ export interface Category {
   label: string;
   leftLabel: string;
   rightLabel: string;
+}
+
+interface CategoryDocument extends Category {
+  sortOrder: number;
+  updatedAt: Date;
 }
 
 export const DEFAULT_CATEGORIES: Category[] = [
@@ -66,21 +71,48 @@ export const DEFAULT_CATEGORIES: Category[] = [
 
 let cache: Category[] = [...DEFAULT_CATEGORIES];
 
-function rowToCategory(row: { id: string; label: string; left_label: string; right_label: string }): Category {
+function documentToCategory(document: CategoryDocument): Category {
   return {
-    id: row.id,
-    label: row.label,
-    leftLabel: row.left_label,
-    rightLabel: row.right_label,
+    id: document.id,
+    label: document.label,
+    leftLabel: document.leftLabel,
+    rightLabel: document.rightLabel,
   };
+}
+
+async function getCategoriesCollection() {
+  const db = await getDb();
+  return db.collection<CategoryDocument>("categories");
+}
+
+function toCategoryDocument(category: Category, sortOrder: number): CategoryDocument {
+  return {
+    ...category,
+    sortOrder,
+    updatedAt: new Date(),
+  };
+}
+
+async function seedDefaultsIfEmpty(): Promise<void> {
+  const categories = await getCategoriesCollection();
+  const count = await categories.countDocuments();
+
+  if (count > 0) {
+    return;
+  }
+
+  await categories.insertMany(
+    DEFAULT_CATEGORIES.map((category, index) => toCategoryDocument(category, index)),
+  );
 }
 
 export async function loadCategories(): Promise<void> {
   try {
-    const res = await pool.query<{ id: string; label: string; left_label: string; right_label: string }>(
-      "SELECT id, label, left_label, right_label FROM categories ORDER BY sort_order ASC"
-    );
-    cache = res.rows.map(rowToCategory);
+    await seedDefaultsIfEmpty();
+
+    const categories = await getCategoriesCollection();
+    const documents = await categories.find({}, { sort: { sortOrder: 1, id: 1 } }).toArray();
+    cache = documents.map(documentToCategory);
     if (cache.length === 0) {
       cache = [...DEFAULT_CATEGORIES];
     }
@@ -100,10 +132,8 @@ export function getCategory(id: string): Category | undefined {
 }
 
 export async function createCategory(c: Category): Promise<Category> {
-  await pool.query(
-    "INSERT INTO categories (id, label, left_label, right_label) VALUES ($1, $2, $3, $4)",
-    [c.id, c.label, c.leftLabel, c.rightLabel]
-  );
+  const categories = await getCategoriesCollection();
+  await categories.insertOne(toCategoryDocument(c, cache.length));
   await loadCategories();
   return c;
 }
@@ -112,27 +142,40 @@ export async function updateCategory(id: string, patch: Partial<Omit<Category, "
   const existing = cache.find((c) => c.id === id);
   if (!existing) return null;
   const next = { ...existing, ...patch };
-  await pool.query(
-    "UPDATE categories SET label = $1, left_label = $2, right_label = $3, updated_at = NOW() WHERE id = $4",
-    [next.label, next.leftLabel, next.rightLabel, id]
+
+  const categories = await getCategoriesCollection();
+  const result = await categories.updateOne(
+    { id },
+    {
+      $set: {
+        label: next.label,
+        leftLabel: next.leftLabel,
+        rightLabel: next.rightLabel,
+        updatedAt: new Date(),
+      },
+    },
   );
+
+  if (result.matchedCount === 0) {
+    return null;
+  }
+
   await loadCategories();
   return next;
 }
 
 export async function deleteCategory(id: string): Promise<boolean> {
-  const res = await pool.query("DELETE FROM categories WHERE id = $1", [id]);
+  const categories = await getCategoriesCollection();
+  const res = await categories.deleteOne({ id });
   await loadCategories();
-  return (res.rowCount ?? 0) > 0;
+  return res.deletedCount > 0;
 }
 
 export async function resetToDefaults(): Promise<void> {
-  await pool.query("DELETE FROM categories");
-  for (const c of DEFAULT_CATEGORIES) {
-    await pool.query(
-      "INSERT INTO categories (id, label, left_label, right_label) VALUES ($1, $2, $3, $4)",
-      [c.id, c.label, c.leftLabel, c.rightLabel]
-    );
-  }
+  const categories = await getCategoriesCollection();
+  await categories.deleteMany({});
+  await categories.insertMany(
+    DEFAULT_CATEGORIES.map((category, index) => toCategoryDocument(category, index)),
+  );
   await loadCategories();
 }

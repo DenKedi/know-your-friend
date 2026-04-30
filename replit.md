@@ -11,8 +11,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
+- **Database**: MongoDB Atlas (native Node driver)
+- **Validation**: Zod (`zod/v4`)
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
@@ -21,7 +21,6 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
@@ -35,7 +34,7 @@ A real-time multiplayer party game at `/`.
 - **Frontend**: React + Vite at `artifacts/know-your-friend/`
 - **Backend**: Express + WebSocket at `artifacts/api-server/`
 - **Game state**: In-memory (ephemeral party sessions)
-- **Categories**: Persisted in PostgreSQL (`categories` table); cached in memory (`categories-store.ts`), refreshed on every mutation
+- **Categories**: Persisted in MongoDB (`categories` collection); cached in memory (`categories-store.ts`), refreshed on every mutation
 - **Real-time**: WebSocket at `/ws?roomCode=CODE&playerToken=TOKEN`
 - **Admin UI**: `/admin` — live add/edit/delete/reset of categories (no auth in v1)
 
