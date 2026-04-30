@@ -48,8 +48,18 @@ export interface Room {
 
 const rooms = new Map<string, Room>();
 
+// Hex alphabet without "0" (and "O" can't occur in hex anyway) to avoid
+// visual confusion when players type the room code.
+const ROOM_CODE_ALPHABET = "123456789ABCDEF";
+const ROOM_CODE_LENGTH = 4;
+
 function generateCode(): string {
-  return randomBytes(2).toString("hex").toUpperCase();
+  const bytes = randomBytes(ROOM_CODE_LENGTH);
+  let code = "";
+  for (let i = 0; i < ROOM_CODE_LENGTH; i++) {
+    code += ROOM_CODE_ALPHABET[bytes[i]! % ROOM_CODE_ALPHABET.length];
+  }
+  return code;
 }
 
 function generateId(): string {
