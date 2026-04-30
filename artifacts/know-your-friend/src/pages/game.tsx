@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useI18n } from "@/lib/i18n";
 
 const MARKER_COLORS = [
   { bg: "#FF4B8B", text: "#fff" },
@@ -39,6 +40,7 @@ export default function Game() {
   const roomCode = params?.code;
   const [, setLocation] = useLocation();
   const { state, send } = useGameSocket(roomCode);
+  const { t } = useI18n();
   const [sliderValue, setSliderValue] = useState(50);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showStandings, setShowStandings] = useState(false);
@@ -101,11 +103,11 @@ export default function Game() {
       {/* Header */}
       <header className="px-4 py-3 flex items-center justify-between border-b border-border bg-card shrink-0 gap-2">
         <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="px-2">
-          Verlassen
+          {t("game.leave")}
         </Button>
         <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Runde {state.currentRound} / {state.totalRounds}
+            {t("game.roundCounter", { current: state.currentRound, total: state.totalRounds })}
           </span>
           <Progress
             value={(state.currentRound / state.totalRounds) * 100}
@@ -119,17 +121,17 @@ export default function Game() {
               size="sm"
               onClick={() => setShowEndConfirm(true)}
               className="px-2 text-xs font-bold text-muted-foreground hover:text-destructive"
-              title="Spiel nach dieser Runde beenden"
+              title={t("game.shortenTitle")}
             >
-              Abkürzen
+              {t("game.shorten")}
             </Button>
           )}
           <button
             onClick={() => setShowStandings(true)}
             className="font-black bg-primary text-primary-foreground px-3 py-1.5 rounded-full text-sm tabular-nums hover:bg-primary/90 active:scale-95 transition-all"
-            aria-label="Punktestand anzeigen"
+            aria-label={t("game.standings")}
           >
-            {me?.score ?? 0} Pkt
+            {me?.score ?? 0} {t("game.pointsSuffix")}
           </button>
         </div>
       </header>
@@ -142,12 +144,12 @@ export default function Game() {
             <CardHeader className="pb-3 pt-5 px-5">
               <CardTitle className="text-xl text-center leading-tight">
                 {isCurrentPlayer
-                  ? "Wähle eine Kategorie"
-                  : `${currentPlayer?.name} wählt eine Kategorie…`}
+                  ? t("game.selectCategory")
+                  : t("game.selectingCategory", { name: currentPlayer?.name ?? "-" })}
               </CardTitle>
               {isCurrentPlayer && (
                 <p className="text-sm text-center text-muted-foreground mt-1">
-                  Du bewertest dich selbst – wähl ehrlich!
+                  {t("game.selfRateHint")}
                 </p>
               )}
             </CardHeader>
@@ -179,13 +181,13 @@ export default function Game() {
                     disabled={state.rerollUsedThisTurn}
                     className="w-full mt-1 font-bold"
                   >
-                    {state.rerollUsedThisTurn ? "🎲 Schon neu gewürfelt" : "🎲 Andere Kategorien"}
+                    {state.rerollUsedThisTurn ? t("game.rerollUsed") : t("game.reroll")}
                   </Button>
                 </div>
               ) : (
                 <div className="py-8 flex flex-col items-center gap-4">
                   <div className="w-14 h-14 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-                  <p className="text-sm text-muted-foreground font-semibold">Bitte warten…</p>
+                  <p className="text-sm text-muted-foreground font-semibold">{t("game.waiting")}</p>
                 </div>
               )}
             </CardContent>
@@ -201,8 +203,8 @@ export default function Game() {
               </h2>
               <p className="text-base text-muted-foreground mt-1">
                 {isCurrentPlayer
-                  ? "Wo ordnest du dich ein?"
-                  : `Psst… ${currentPlayer?.name} bewertet sich gerade`}
+                  ? t("game.whereAreYou")
+                  : t("game.selfRatingOther", { name: currentPlayer?.name ?? "-" })}
               </p>
             </div>
 
@@ -222,14 +224,14 @@ export default function Game() {
                         className="w-full py-7 text-lg font-black mt-4 rounded-xl"
                         onClick={handleSubmitRating}
                       >
-                        Festlegen
+                        {t("game.lockIn")}
                       </Button>
                     </>
                   ) : (
                     <div className="py-10 text-center space-y-2">
                       <div className="text-4xl font-black text-primary">{sliderValue}</div>
                       <p className="text-muted-foreground font-semibold">
-                        Versteckt – deine Freunde raten gleich…
+                        {t("game.hidden")}
                       </p>
                     </div>
                   )}
@@ -252,8 +254,8 @@ export default function Game() {
               </h2>
               <p className="text-base text-muted-foreground mt-1">
                 {isCurrentPlayer
-                  ? `Deine Freunde raten… (${state.guessesSubmitted}/${state.guessesTotal})`
-                  : `Wo hat sich ${currentPlayer?.name} eingeschätzt?`}
+                  ? t("game.friendsGuessing", { submitted: state.guessesSubmitted, total: state.guessesTotal })
+                  : t("game.guessPrompt", { name: currentPlayer?.name ?? "-" })}
               </p>
             </div>
 
@@ -273,7 +275,7 @@ export default function Game() {
                         className="w-full py-7 text-lg font-black mt-4 rounded-xl"
                         onClick={handleSubmitGuess}
                       >
-                        Tipp abgeben
+                        {t("game.submitGuess")}
                       </Button>
                     </>
                   ) : (
@@ -282,7 +284,7 @@ export default function Game() {
                         {state.guessesSubmitted}/{state.guessesTotal}
                       </div>
                       <p className="text-muted-foreground font-semibold">
-                        Tipp abgegeben! Warte auf die anderen…
+                        {t("game.guessSubmitted")}
                       </p>
                     </div>
                   )
@@ -292,7 +294,7 @@ export default function Game() {
                       {state.guessesSubmitted}/{state.guessesTotal}
                     </div>
                     <div className="text-muted-foreground font-bold uppercase tracking-wider text-sm">
-                      Tipps eingegangen
+                      {t("game.guessesReceived")}
                     </div>
                     <div className="w-full bg-input rounded-full h-2 mt-2">
                       <div
@@ -319,13 +321,13 @@ export default function Game() {
             {/* Title */}
             <div className="text-center px-2">
               <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
-                Auflösung!
+                {t("game.reveal")}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {currentPlayer?.name} bei{" "}
-                <span className="font-bold text-foreground">
-                  {state.currentCategoryLabel}
-                </span>
+                {t("game.revealSubtitle", {
+                  name: currentPlayer?.name ?? "-",
+                  category: state.currentCategoryLabel ?? "-",
+                })}
               </p>
             </div>
 
@@ -343,7 +345,7 @@ export default function Game() {
                     })),
                     {
                       value: state.selfRating ?? 0,
-                      label: currentPlayer?.name ?? "Wahrheit",
+                      label: currentPlayer?.name ?? t("game.truth"),
                       isTruth: true,
                     },
                   ]}
@@ -378,13 +380,17 @@ export default function Game() {
                         <div className="min-w-0">
                           <div className="font-bold text-base truncate">{r.playerName}</div>
                           <div className="text-xs text-muted-foreground">
-                            Tipp: {r.guess} · Wahrheit: {state.selfRating} · Diff: {r.diff}
+                            {t("game.guessLine", {
+                              guess: r.guess,
+                              truth: state.selfRating ?? 0,
+                              diff: r.diff,
+                            })}
                           </div>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-2">
                         <div className="font-black text-xl text-primary">+{r.points}</div>
-                        <div className="text-xs text-muted-foreground">Punkte</div>
+                        <div className="text-xs text-muted-foreground">{t("game.points")}</div>
                       </div>
                     </div>
                   );
@@ -394,7 +400,7 @@ export default function Game() {
             {/* Next-up hint */}
             {!isLastTurn && nextPlayer && (
               <div className="text-center text-sm text-muted-foreground">
-                Als Nächstes ist <span className="font-bold text-foreground">{nextPlayer.name}</span> dran
+                {t("game.nextUp", { name: nextPlayer.name })}
               </div>
             )}
 
@@ -403,7 +409,7 @@ export default function Game() {
               className="w-full py-6 text-lg font-black rounded-xl mt-1"
               onClick={handleNextTurn}
             >
-              {isLastTurn ? "Spiel beenden" : "Weiter"}
+              {isLastTurn ? t("game.endGame") : t("game.continue")}
             </Button>
           </div>
         )}
@@ -413,20 +419,20 @@ export default function Game() {
       <AlertDialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Spiel abkürzen?</AlertDialogTitle>
+            <AlertDialogTitle>{t("game.shortenConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Diese Runde wird noch zu Ende gespielt – danach ist Schluss und ihr seht das Endergebnis.
+              {t("game.shortenConfirmDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Doch nicht</AlertDialogCancel>
+            <AlertDialogCancel>{t("game.shortenConfirmCancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 send({ type: "end_game_early" });
                 setShowEndConfirm(false);
               }}
             >
-              Ja, abkürzen
+              {t("game.shortenConfirmAccept")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -437,7 +443,7 @@ export default function Game() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-2xl font-black uppercase tracking-tight text-center">
-              Punktestand
+              {t("game.standings")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-2 mt-2">
@@ -462,7 +468,7 @@ export default function Game() {
                     {p.name.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0 font-bold truncate">
-                    {p.name} {isMe && <span className="text-xs text-muted-foreground font-normal">(du)</span>}
+                    {p.name} {isMe && <span className="text-xs text-muted-foreground font-normal">({t("common.you")})</span>}
                   </div>
                   <div className="font-black text-lg text-primary tabular-nums">
                     {p.score}
@@ -488,6 +494,7 @@ function PendingGuessersCard({
     currentPlayerId?: string | null;
   };
 }) {
+  const { t } = useI18n();
   const pending = (state.pendingGuesserIds ?? []).map((id) =>
     state.players.find((p) => p.id === id),
   ).filter(Boolean) as { id: string; name: string }[];
@@ -504,7 +511,7 @@ function PendingGuessersCard({
         {pending.length > 0 && (
           <div>
             <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1">
-              Noch offen
+              {t("game.pending")}
             </div>
             <div className="flex flex-wrap gap-1.5">
               {pending.map((p) => (
@@ -521,7 +528,7 @@ function PendingGuessersCard({
         {guessed.length > 0 && (
           <div>
             <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1">
-              Fertig
+              {t("game.done")}
             </div>
             <div className="flex flex-wrap gap-1.5">
               {guessed.map((p) => (
@@ -537,7 +544,7 @@ function PendingGuessersCard({
         )}
         {nextPlayer && nextPlayer.id !== state.currentPlayerId && (
           <div className="pt-1 text-xs text-muted-foreground">
-            Als Nächstes dran: <span className="font-bold text-foreground">{nextPlayer.name}</span>
+            {t("game.nextTurnLabel", { name: nextPlayer.name })}
           </div>
         )}
       </CardContent>

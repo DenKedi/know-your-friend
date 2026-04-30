@@ -7,6 +7,8 @@ import {
   resetToDefaults,
   getCategory,
 } from "../lib/categories-store";
+import type { CategoryTranslation } from "../lib/category-types";
+import { SUPPORTED_LANGUAGES, type LanguageCode } from "../lib/languages";
 
 const router: IRouter = Router();
 
@@ -18,14 +20,51 @@ function isValidString(s: unknown, max = 128): s is string {
   return typeof s === "string" && s.trim().length > 0 && s.trim().length <= max;
 }
 
+function parseTranslation(value: unknown): CategoryTranslation | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const translation = value as Record<string, unknown>;
+  if (!isValidString(translation.label) || !isValidString(translation.leftLabel) || !isValidString(translation.rightLabel)) {
+    return null;
+  }
+
+  return {
+    label: translation.label.trim(),
+    leftLabel: translation.leftLabel.trim(),
+    rightLabel: translation.rightLabel.trim(),
+  };
+}
+
+function parseCompleteTranslations(value: unknown): Record<LanguageCode, CategoryTranslation> | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const translations = {} as Record<LanguageCode, CategoryTranslation>;
+
+  for (const language of SUPPORTED_LANGUAGES) {
+    const translation = parseTranslation(raw[language]);
+    if (!translation) {
+      return null;
+    }
+    translations[language] = translation;
+  }
+
+  return translations;
+}
+
 router.get("/categories", async (_req, res) => {
   res.json(getCategories());
 });
 
 router.post("/categories", async (req, res): Promise<void> => {
-  const { id, label, leftLabel, rightLabel } = req.body ?? {};
-  if (!isValidId(id) || !isValidString(label) || !isValidString(leftLabel) || !isValidString(rightLabel)) {
-    res.status(400).json({ error: "Invalid payload. id [a-z0-9_], label/leftLabel/rightLabel non-empty (max 128 chars)." });
+  const { id, translations } = req.body ?? {};
+  const parsedTranslations = parseCompleteTranslations(translations);
+  if (!isValidId(id) || !parsedTranslations) {
+    res.status(400).json({ error: "Invalid payload. id [a-z0-9_] plus complete translations for en, de, fr, es, it, ru are required." });
     return;
   }
   if (getCategory(id)) {
@@ -35,9 +74,7 @@ router.post("/categories", async (req, res): Promise<void> => {
   try {
     const created = await createCategory({
       id: id.toLowerCase(),
-      label: label.trim(),
-      leftLabel: leftLabel.trim(),
-      rightLabel: rightLabel.trim(),
+      translations: parsedTranslations,
     });
     res.status(201).json(created);
   } catch (err) {
@@ -47,35 +84,18 @@ router.post("/categories", async (req, res): Promise<void> => {
 
 router.put("/categories/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
-  const { label, leftLabel, rightLabel } = req.body ?? {};
+  const { translations } = req.body ?? {};
   if (!getCategory(id)) {
     res.status(404).json({ error: "Category not found" });
     return;
   }
-  const patch: Record<string, string> = {};
-  if (label !== undefined) {
-    if (!isValidString(label)) {
-      res.status(400).json({ error: "label must be a non-empty string ≤128 chars" });
-      return;
-    }
-    patch["label"] = label.trim();
-  }
-  if (leftLabel !== undefined) {
-    if (!isValidString(leftLabel)) {
-      res.status(400).json({ error: "leftLabel must be a non-empty string ≤128 chars" });
-      return;
-    }
-    patch["leftLabel"] = leftLabel.trim();
-  }
-  if (rightLabel !== undefined) {
-    if (!isValidString(rightLabel)) {
-      res.status(400).json({ error: "rightLabel must be a non-empty string ≤128 chars" });
-      return;
-    }
-    patch["rightLabel"] = rightLabel.trim();
+  const parsedTranslations = parseCompleteTranslations(translations);
+  if (!parsedTranslations) {
+    res.status(400).json({ error: "translations must include non-empty label/leftLabel/rightLabel for en, de, fr, es, it, ru" });
+    return;
   }
   try {
-    const updated = await updateCategory(id, patch);
+    const updated = await updateCategory(id, { translations: parsedTranslations });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

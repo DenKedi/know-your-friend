@@ -8,6 +8,7 @@ import Lobby from "@/pages/lobby";
 import Game from "@/pages/game";
 import Results from "@/pages/results";
 import Admin from "@/pages/admin";
+import { I18nProvider } from "@/lib/i18n";
 
 const queryClient = new QueryClient();
 
@@ -27,12 +28,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <I18nProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </I18nProvider>
     </QueryClientProvider>
   );
 }

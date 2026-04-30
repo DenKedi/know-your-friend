@@ -3,12 +3,14 @@ import { useGameSocket } from "@/hooks/use-game-socket";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect } from "react";
+import { getLanguageOption, useI18n } from "@/lib/i18n";
 
 export default function Lobby() {
   const [match, params] = useRoute("/room/:code/lobby");
   const roomCode = params?.code;
   const [, setLocation] = useLocation();
   const { state, send, isConnected } = useGameSocket(roomCode);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (state?.status && state.status !== "waiting") {
@@ -21,7 +23,7 @@ export default function Lobby() {
   if (!state) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center">
-        <div className="text-xl font-bold animate-pulse">Verbinde…</div>
+        <div className="text-xl font-bold animate-pulse">{t("lobby.connecting")}</div>
       </div>
     );
   }
@@ -36,13 +38,18 @@ export default function Lobby() {
       {/* Room code hero */}
       <div className="w-full max-w-lg text-center mb-8">
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">
-          Raum-Code
+          {t("lobby.roomCode")}
         </p>
         <div className="text-6xl font-black text-primary tracking-[0.2em] bg-card inline-block px-8 py-4 rounded-2xl border-2 border-border shadow-lg">
           {roomCode}
         </div>
         <p className="text-sm text-muted-foreground mt-3">
-          Teile diesen Code mit deinen Freunden
+          {t("lobby.shareCode")}
+        </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          {t("lobby.roomLanguage", {
+            language: `${getLanguageOption(state.language).flag} ${getLanguageOption(state.language).label}`,
+          })}
         </p>
       </div>
 
@@ -50,7 +57,7 @@ export default function Lobby() {
       <Card className="w-full max-w-lg border-2 border-border shadow-lg">
         <CardHeader className="pb-3 pt-5 px-5">
           <CardTitle className="text-xl font-black flex items-center justify-between">
-            <span>Spieler ({state.players.length})</span>
+            <span>{t("lobby.players", { count: state.players.length })}</span>
             <span className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-green-500" : "bg-muted-foreground"}`} />
           </CardTitle>
         </CardHeader>
@@ -78,13 +85,13 @@ export default function Lobby() {
               disabled={state.players.length < 2}
             >
               {state.players.length < 2
-                ? "Warte auf Spieler…"
-                : "Spiel starten!"}
+                ? t("lobby.waitingForPlayers")
+                : t("lobby.startGame")}
             </Button>
           ) : (
             <div className="text-center p-5 bg-input rounded-xl border-2 border-dashed border-muted-foreground/40">
               <p className="text-base font-bold animate-pulse text-muted-foreground">
-                Warte auf den Host…
+                {t("lobby.waitingForHost")}
               </p>
             </div>
           )}

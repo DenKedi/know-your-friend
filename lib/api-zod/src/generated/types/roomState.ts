@@ -7,11 +7,13 @@
  */
 import type { Category } from "./category";
 import type { GuessResult } from "./guessResult";
+import type { LanguageCode } from "./languageCode";
 import type { Player } from "./player";
 import type { RoomStateStatus } from "./roomStateStatus";
 
 export interface RoomState {
   roomCode: string;
+  language: LanguageCode;
   status: RoomStateStatus;
   players: Player[];
   currentRound: number;

@@ -5,9 +5,11 @@
  * Know Your Friend game API
  * OpenAPI spec version: 0.1.0
  */
+import type { LanguageCode } from "./languageCode";
 
 export interface JoinRoomResponse {
   roomCode: string;
   playerId: string;
   playerToken: string;
+  roomLanguage: LanguageCode;
 }

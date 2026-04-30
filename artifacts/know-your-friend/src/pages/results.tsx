@@ -3,6 +3,7 @@ import { useGameSocket } from "@/hooks/use-game-socket";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 
 const PLACE_STYLES = [
   { ring: "ring-2 ring-white/60", label: "bg-white text-black" },
@@ -16,6 +17,7 @@ export default function Results() {
   const [, setLocation] = useLocation();
   const { state } = useGameSocket(roomCode);
   const [showScores, setShowScores] = useState(false);
+  const { t } = useI18n();
 
   useEffect(() => {
     const t = setTimeout(() => setShowScores(true), 400);
@@ -27,7 +29,7 @@ export default function Results() {
   if (!state || state.status !== "game_over") {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center">
-        <div className="text-xl font-bold animate-pulse">Lade Ergebnis…</div>
+        <div className="text-xl font-bold animate-pulse">{t("results.loading")}</div>
       </div>
     );
   }
@@ -41,10 +43,10 @@ export default function Results() {
       {/* Hero */}
       <div className="w-full max-w-lg text-center mb-8 animate-in slide-in-from-top-8 duration-700">
         <h1 className="text-5xl font-black text-primary uppercase tracking-tight mb-3">
-          Spiel vorbei!
+          {t("results.title")}
         </h1>
         <p className="text-xl font-bold text-foreground">
-          <span className="text-secondary">{winner?.name}</span> kennt seine Freunde am besten.
+          {t("results.subtitle", { name: winner?.name ?? "-" })}
         </p>
       </div>
 
@@ -52,7 +54,7 @@ export default function Results() {
       <Card className="w-full max-w-lg border-2 border-border shadow-lg">
         <CardHeader className="border-b border-border pb-4 pt-5 px-5">
           <CardTitle className="text-2xl font-black text-center uppercase tracking-wider">
-            Endergebnis
+            {t("results.scoreboard")}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 py-4 space-y-2.5">
@@ -74,7 +76,7 @@ export default function Results() {
                     <span className="font-bold text-lg truncate">{p.name}</span>
                     {i === 0 && (
                       <span className="text-xs font-black bg-primary text-primary-foreground px-2 py-0.5 rounded-full flex-shrink-0">
-                        Sieger
+                        {t("results.winner")}
                       </span>
                     )}
                   </div>
@@ -94,7 +96,7 @@ export default function Results() {
           className="w-full text-lg font-black py-6 rounded-xl"
           onClick={() => setLocation("/")}
         >
-          Nochmal spielen
+          {t("results.playAgain")}
         </Button>
       </div>
     </div>

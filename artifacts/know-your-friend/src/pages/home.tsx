@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LANGUAGE_OPTIONS, getLanguageOption, useI18n } from "@/lib/i18n";
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { language, setLanguage, t } = useI18n();
   const [name, setName] = useState("");
   const [roomCode, setRoomCode] = useState("");
 
@@ -17,11 +19,11 @@ export default function Home() {
 
   const handleCreate = () => {
     if (!name.trim()) {
-      toast({ title: "Bitte gib deinen Namen ein", variant: "destructive" });
+      toast({ title: t("home.nameRequired"), variant: "destructive" });
       return;
     }
     createRoom.mutate(
-      { data: { hostName: name, totalRounds: 5 } },
+      { data: { hostName: name, totalRounds: 5, language } },
       {
         onSuccess: (data) => {
           sessionStorage.setItem(`kyf_token_${data.roomCode}`, data.playerToken);
@@ -30,8 +32,8 @@ export default function Home() {
         },
         onError: (err) => {
           toast({
-            title: "Raum konnte nicht erstellt werden",
-            description: err instanceof Error ? err.message : "Unbekannter Fehler",
+            title: t("home.createFailed"),
+            description: err instanceof Error ? err.message : t("home.unknownError"),
             variant: "destructive",
           });
         },
@@ -41,11 +43,11 @@ export default function Home() {
 
   const handleJoin = () => {
     if (!name.trim()) {
-      toast({ title: "Bitte gib deinen Namen ein", variant: "destructive" });
+      toast({ title: t("home.nameRequired"), variant: "destructive" });
       return;
     }
     if (!roomCode.trim() || roomCode.length !== 4) {
-      toast({ title: "Bitte einen gültigen 4-stelligen Code eingeben", variant: "destructive" });
+      toast({ title: t("home.invalidCode"), variant: "destructive" });
       return;
     }
     joinRoom.mutate(
@@ -58,8 +60,8 @@ export default function Home() {
         },
         onError: (err) => {
           toast({
-            title: "Raum konnte nicht betreten werden",
-            description: err instanceof Error ? err.message : "Unbekannter Fehler",
+            title: t("home.joinFailed"),
+            description: err instanceof Error ? err.message : t("home.unknownError"),
             variant: "destructive",
           });
         },
@@ -83,17 +85,53 @@ export default function Home() {
             Know Your<br />Friend
           </CardTitle>
           <CardDescription className="text-base text-muted-foreground font-semibold">
-            Das Spiel der verrückten Annahmen
+            {t("home.tagline")}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="px-6 pb-8 space-y-5">
+          <div className="space-y-2">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {t("home.languageLabel")}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {t("home.languageHint")}
+              </div>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {LANGUAGE_OPTIONS.map((option) => {
+                const active = option.code === language;
+                return (
+                  <button
+                    key={option.code}
+                    type="button"
+                    onClick={() => setLanguage(option.code)}
+                    className={`min-w-[74px] rounded-2xl border px-3 py-2 text-sm font-bold transition-colors ${
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-input text-foreground"
+                    }`}
+                    aria-pressed={active}
+                    title={option.label}
+                  >
+                    <div className="text-lg leading-none">{option.flag}</div>
+                    <div className="mt-1 text-[11px] uppercase tracking-wide">{option.code}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("lobby.roomLanguage", { language: `${getLanguageOption(language).flag} ${getLanguageOption(language).label}` })}
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Dein Name
+              {t("home.nameLabel")}
             </label>
             <Input
-              placeholder="z.B. Gossip Girl"
+              placeholder={t("home.namePlaceholder")}
               className="text-lg py-5 font-bold bg-input border-2 border-transparent focus:border-primary"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -108,7 +146,7 @@ export default function Home() {
               onClick={handleCreate}
               disabled={createRoom.isPending || joinRoom.isPending}
             >
-              Neues Spiel erstellen
+              {t("home.createRoom")}
             </Button>
 
             <div className="relative">
@@ -116,13 +154,13 @@ export default function Home() {
                 <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase font-bold tracking-wider">
-                <span className="bg-card px-2 text-muted-foreground">oder beitreten</span>
+                <span className="bg-card px-2 text-muted-foreground">{t("home.joinDivider")}</span>
               </div>
             </div>
 
             <div className="flex gap-2">
               <Input
-                placeholder="CODE"
+                placeholder={t("home.roomCodePlaceholder")}
                 className="text-center uppercase text-xl font-bold py-6 bg-input border-2 border-transparent focus:border-secondary"
                 value={roomCode}
                 onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
@@ -135,7 +173,7 @@ export default function Home() {
                 onClick={handleJoin}
                 disabled={createRoom.isPending || joinRoom.isPending}
               >
-                Beitreten
+                {t("home.joinRoom")}
               </Button>
             </div>
           </div>

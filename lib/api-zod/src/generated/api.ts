@@ -21,6 +21,7 @@ export const HealthCheckResponse = zod.object({
 export const CreateRoomBody = zod.object({
   hostName: zod.string(),
   totalRounds: zod.number(),
+  language: zod.enum(["en", "de", "fr", "es", "it", "ru"]),
 });
 
 /**
@@ -38,6 +39,7 @@ export const JoinRoomResponse = zod.object({
   roomCode: zod.string(),
   playerId: zod.string(),
   playerToken: zod.string(),
+  roomLanguage: zod.enum(["en", "de", "fr", "es", "it", "ru"]),
 });
 
 /**
@@ -49,6 +51,7 @@ export const GetRoomParams = zod.object({
 
 export const GetRoomResponse = zod.object({
   roomCode: zod.string(),
+  language: zod.enum(["en", "de", "fr", "es", "it", "ru"]),
   status: zod.enum([
     "waiting",
     "category_selection",

@@ -13,9 +13,21 @@ export interface ErrorResponse {
   error: string;
 }
 
+export type LanguageCode = (typeof LanguageCode)[keyof typeof LanguageCode];
+
+export const LanguageCode = {
+  en: "en",
+  de: "de",
+  fr: "fr",
+  es: "es",
+  it: "it",
+  ru: "ru",
+} as const;
+
 export interface CreateRoomBody {
   hostName: string;
   totalRounds: number;
+  language: LanguageCode;
 }
 
 export interface JoinRoomBody {
@@ -26,6 +38,7 @@ export interface JoinRoomResponse {
   roomCode: string;
   playerId: string;
   playerToken: string;
+  roomLanguage: LanguageCode;
 }
 
 export interface Player {
@@ -65,6 +78,7 @@ export interface Category {
 
 export interface RoomState {
   roomCode: string;
+  language: LanguageCode;
   status: RoomStateStatus;
   players: Player[];
   currentRound: number;

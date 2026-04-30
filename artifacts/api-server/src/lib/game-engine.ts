@@ -1,7 +1,12 @@
 import { randomBytes } from "crypto";
-import { getCategories, type Category } from "./categories-store";
+import {
+  getLocalizedCategories,
+  getLocalizedCategory,
+  type LocalizedCategory,
+} from "./categories-store";
+import type { LanguageCode } from "./languages";
 
-export type { Category };
+export type { LocalizedCategory as Category };
 
 export interface Player {
   id: string;
@@ -30,14 +35,15 @@ export type GameStatus =
 
 export interface Room {
   code: string;
+  language: LanguageCode;
   hostId: string;
   players: Player[];
   status: GameStatus;
   currentRound: number;
   totalRounds: number;
   currentPlayerIndex: number;
-  currentCategory: Category | null;
-  currentAvailableCategories: Category[];
+  currentCategory: LocalizedCategory | null;
+  currentAvailableCategories: LocalizedCategory[];
   selfRating: number | null;
   guesses: Map<string, number>;
   roundResults: GuessResult[] | null;
@@ -71,7 +77,7 @@ function generateToken(): string {
 }
 
 function pickCategoriesForTurn(room: Room): void {
-  const all = getCategories();
+  const all = getLocalizedCategories(room.language);
   let remaining = all.filter((c) => !room.usedCategoryIds.has(c.id));
   // If we've exhausted them all (e.g., long game), reset the used pool so the game can continue.
   if (remaining.length === 0) {
@@ -82,7 +88,7 @@ function pickCategoriesForTurn(room: Room): void {
   room.currentAvailableCategories = shuffled.slice(0, Math.min(3, shuffled.length));
 }
 
-export function createRoom(hostName: string, totalRounds: number): { room: Room; player: Player } {
+export function createRoom(hostName: string, totalRounds: number, language: LanguageCode): { room: Room; player: Player } {
   let code: string;
   do {
     code = generateCode();
@@ -101,6 +107,7 @@ export function createRoom(hostName: string, totalRounds: number): { room: Room;
 
   const room: Room = {
     code,
+    language,
     hostId,
     players: [host],
     status: "waiting",
@@ -161,6 +168,14 @@ export function startGame(room: Room): boolean {
   room.usedCategoryIds = new Set();
   room.rerollUsedThisTurn = false;
   pickCategoriesForTurn(room);
+  if (room.currentAvailableCategories.length === 0) {
+    room.status = "waiting";
+    room.currentRound = 0;
+    room.currentCategory = null;
+    room.currentAvailableCategories = [];
+    return false;
+  }
+
   return true;
 }
 
@@ -193,7 +208,7 @@ export function endGameAfterCurrentRound(room: Room): boolean {
 export function selectCategory(room: Room, categoryId: string): boolean {
   if (room.status !== "category_selection") return false;
 
-  const category = getCategories().find((c) => c.id === categoryId);
+  const category = getLocalizedCategory(categoryId, room.language);
   if (!category) return false;
 
   room.currentCategory = category;
@@ -300,6 +315,7 @@ export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
 
   return {
     roomCode: room.code,
+    language: room.language,
     status: room.status,
     players: room.players.map((p) => ({
       id: p.id,

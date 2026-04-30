@@ -6,6 +6,7 @@ import {
   GetRoomParams,
 } from "@workspace/api-zod";
 import { createRoom, joinRoom, getRoom, getRoomStateForClient } from "../lib/game-engine";
+import type { LanguageCode } from "../lib/languages";
 
 const router: IRouter = Router();
 
@@ -16,18 +17,23 @@ router.post("/rooms", async (req, res): Promise<void> => {
     return;
   }
 
-  const { hostName, totalRounds } = parsed.data;
+  const { hostName, totalRounds, language } = parsed.data as {
+    hostName: string;
+    totalRounds: number;
+    language: LanguageCode;
+  };
   if (!hostName.trim()) {
     res.status(400).json({ error: "Host name is required" });
     return;
   }
 
-  const { room, player } = createRoom(hostName.trim(), totalRounds);
+  const { room, player } = createRoom(hostName.trim(), totalRounds, language);
 
   res.status(201).json({
     roomCode: room.code,
     playerId: player.id,
     playerToken: player.token,
+    roomLanguage: room.language,
   });
 });
 
@@ -61,6 +67,7 @@ router.post("/rooms/:roomCode/join", async (req, res): Promise<void> => {
     roomCode: room.code,
     playerId: player.id,
     playerToken: player.token,
+    roomLanguage: room.language,
   });
 });
 

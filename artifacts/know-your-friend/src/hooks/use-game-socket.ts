@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { RoomState } from "@workspace/api-client-react";
 import { wsUrl } from "../lib/api-base";
 import { useToast } from "./use-toast";
+import { useI18n } from "@/lib/i18n";
 
 export type GameRoomState = RoomState & {
   nextPlayerId?: string | null;
@@ -31,6 +32,7 @@ export function useGameSocket(roomCode: string | undefined) {
   const unmountedRef = useRef(false);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
+  const { t } = useI18n();
 
   const connect = useCallback(() => {
     if (!roomCode || unmountedRef.current) return;
@@ -68,7 +70,7 @@ export function useGameSocket(roomCode: string | undefined) {
         } else if (data.type === "error") {
           setError(data.message);
           toast({
-            title: "Error",
+            title: t("common.error"),
             description: data.message,
             variant: "destructive",
           });
@@ -112,8 +114,8 @@ export function useGameSocket(roomCode: string | undefined) {
       wsRef.current.send(JSON.stringify(message));
     } else {
       toast({
-        title: "Disconnected",
-        description: "Trying to reconnect...",
+        title: t("socket.disconnectedTitle"),
+        description: t("socket.disconnectedDescription"),
         variant: "destructive",
       });
     }

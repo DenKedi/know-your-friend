@@ -13,6 +13,7 @@ export * from "./guessResult";
 export * from "./healthStatus";
 export * from "./joinRoomBody";
 export * from "./joinRoomResponse";
+export * from "./languageCode";
 export * from "./player";
 export * from "./roomState";
 export * from "./roomStateStatus";

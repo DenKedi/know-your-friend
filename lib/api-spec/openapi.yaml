@@ -138,9 +138,12 @@ components:
           type: string
         totalRounds:
           type: integer
+        language:
+          $ref: "#/components/schemas/LanguageCode"
       required:
         - hostName
         - totalRounds
+        - language
 
     JoinRoomBody:
       type: object
@@ -159,10 +162,23 @@ components:
           type: string
         playerToken:
           type: string
+        roomLanguage:
+          $ref: "#/components/schemas/LanguageCode"
       required:
         - roomCode
         - playerId
         - playerToken
+        - roomLanguage
+
+    LanguageCode:
+      type: string
+      enum:
+        - en
+        - de
+        - fr
+        - es
+        - it
+        - ru
 
     Player:
       type: object
@@ -186,6 +202,8 @@ components:
       properties:
         roomCode:
           type: string
+        language:
+          $ref: "#/components/schemas/LanguageCode"
         status:
           type: string
           enum:
@@ -229,6 +247,7 @@ components:
             $ref: "#/components/schemas/Category"
       required:
         - roomCode
+        - language
         - status
         - players
         - currentRound
