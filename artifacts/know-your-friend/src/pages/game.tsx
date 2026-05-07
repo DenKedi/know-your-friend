@@ -391,11 +391,7 @@ export default function Game() {
                         <div className="min-w-0">
                           <div className="font-bold text-base truncate">{r.playerName}</div>
                           <div className="text-xs text-muted-foreground">
-                            {t("game.guessLine", {
-                              guess: r.guess,
-                              truth: state.selfRating ?? 0,
-                              diff: r.diff,
-                            })}
+                            Δ {r.diff}
                           </div>
                         </div>
                       </div>

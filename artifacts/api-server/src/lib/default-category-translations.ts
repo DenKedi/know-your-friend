@@ -426,4 +426,12 @@ export const DEFAULT_CATEGORY_TRANSLATIONS: Record<string, Record<LanguageCode, 
     it: { label: "Stile di scrittura", leftLabel: "Solo testo", rightLabel: "Pieno di emoji" },
     ru: { label: "Стиль письма", leftLabel: "Только текст", rightLabel: "Полно эмодзи" },
   },
+  texting: {
+    en: { label: "Texting", leftLabel: "Replies instantly", rightLabel: "Leaves you on read for weeks" },
+    de: { label: "Texting", leftLabel: "Antwortet sofort", rightLabel: "Lässt wochenlang auf Gelesen" },
+    fr: { label: "Messages", leftLabel: "Répond tout de suite", rightLabel: "Laisse en vu pendant des semaines" },
+    es: { label: "Mensajes", leftLabel: "Responde al instante", rightLabel: "Te deja en visto durante semanas" },
+    it: { label: "Messaggi", leftLabel: "Risponde subito", rightLabel: "Ti lascia visualizzato per settimane" },
+    ru: { label: "Переписка", leftLabel: "Отвечает сразу", rightLabel: "Оставляет в прочитанном на недели" },
+  },
 };

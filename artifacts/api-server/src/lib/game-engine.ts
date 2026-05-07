@@ -52,6 +52,8 @@ export interface Room {
   rerollUsedThisTurn: boolean;
   /** Epoch-ms deadline for the current timed phase, or null when no timer is active. */
   phaseDeadline: number | null;
+  /** Players whose guess was auto-submitted by the timer (they receive 0 points). */
+  timedOutGuessers: Set<string>;
 }
 
 
@@ -125,6 +127,7 @@ export function createRoom(hostName: string, totalRounds: number, language: Lang
     usedCategoryIds: new Set(),
     rerollUsedThisTurn: false,
     phaseDeadline: null,
+    timedOutGuessers: new Set(),
   };
 
   rooms.set(code, room);
@@ -221,6 +224,7 @@ export function selectCategory(room: Room, categoryId: string): boolean {
   room.status = "self_rating";
   room.selfRating = null;
   room.guesses = new Map();
+  room.timedOutGuessers = new Set();
   room.phaseDeadline = Date.now() + GAMEPLAY_CONFIG.SELF_RATING_TIMEOUT_MS;
   return true;
 }
@@ -260,8 +264,9 @@ function computeRoundResults(room: Room): void {
     if (!currentPlayer || player.id === currentPlayer.id) continue;
 
     const guess = room.guesses.get(player.id) ?? GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE;
+    const timedOut = room.timedOutGuessers.has(player.id);
     const diff = Math.abs(guess - selfRating);
-    const points = Math.max(0, GAMEPLAY_CONFIG.MAX_POINTS_PER_ROUND - diff * GAMEPLAY_CONFIG.POINTS_PER_DIFF_UNIT);
+    const points = timedOut ? 0 : Math.max(0, GAMEPLAY_CONFIG.MAX_POINTS_PER_ROUND - diff * GAMEPLAY_CONFIG.POINTS_PER_DIFF_UNIT);
 
     player.score += points;
     results.push({
