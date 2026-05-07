@@ -5,6 +5,7 @@ import {
   type LocalizedCategory,
 } from "./categories-store";
 import type { LanguageCode } from "./languages";
+import { GAMEPLAY_CONFIG } from "./gameplay-config";
 
 export type { LocalizedCategory as Category };
 
@@ -49,6 +50,8 @@ export interface Room {
   roundResults: GuessResult[] | null;
   usedCategoryIds: Set<string>;
   rerollUsedThisTurn: boolean;
+  /** Epoch-ms deadline for the current timed phase, or null when no timer is active. */
+  phaseDeadline: number | null;
 }
 
 
@@ -85,7 +88,7 @@ function pickCategoriesForTurn(room: Room): void {
     remaining = all;
   }
   const shuffled = [...remaining].sort(() => Math.random() - 0.5);
-  room.currentAvailableCategories = shuffled.slice(0, Math.min(3, shuffled.length));
+  room.currentAvailableCategories = shuffled.slice(0, Math.min(GAMEPLAY_CONFIG.CATEGORIES_PER_TURN, shuffled.length));
 }
 
 export function createRoom(hostName: string, totalRounds: number, language: LanguageCode): { room: Room; player: Player } {
@@ -121,6 +124,7 @@ export function createRoom(hostName: string, totalRounds: number, language: Lang
     roundResults: null,
     usedCategoryIds: new Set(),
     rerollUsedThisTurn: false,
+    phaseDeadline: null,
   };
 
   rooms.set(code, room);
@@ -160,13 +164,14 @@ export function getPlayerByToken(room: Room, token: string): Player | undefined 
 
 export function startGame(room: Room): boolean {
   if (room.status !== "waiting") return false;
-  if (room.players.length < 2) return false;
+  if (room.players.length < GAMEPLAY_CONFIG.MIN_PLAYERS_TO_START) return false;
 
   room.status = "category_selection";
   room.currentRound = 1;
   room.currentPlayerIndex = 0;
   room.usedCategoryIds = new Set();
   room.rerollUsedThisTurn = false;
+  room.phaseDeadline = null;
   pickCategoriesForTurn(room);
   if (room.currentAvailableCategories.length === 0) {
     room.status = "waiting";
@@ -216,6 +221,7 @@ export function selectCategory(room: Room, categoryId: string): boolean {
   room.status = "self_rating";
   room.selfRating = null;
   room.guesses = new Map();
+  room.phaseDeadline = Date.now() + GAMEPLAY_CONFIG.SELF_RATING_TIMEOUT_MS;
   return true;
 }
 
@@ -225,6 +231,7 @@ export function submitSelfRating(room: Room, rating: number): boolean {
 
   room.selfRating = rating;
   room.status = "guessing";
+  room.phaseDeadline = Date.now() + GAMEPLAY_CONFIG.GUESSING_TIMEOUT_MS;
   return true;
 }
 
@@ -245,16 +252,16 @@ export function submitGuess(room: Room, playerId: string, guess: number): boolea
 }
 
 function computeRoundResults(room: Room): void {
-  const selfRating = room.selfRating ?? 50;
+  const selfRating = room.selfRating ?? GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE;
   const results: GuessResult[] = [];
 
   for (const player of room.players) {
     const currentPlayer = room.players[room.currentPlayerIndex];
     if (!currentPlayer || player.id === currentPlayer.id) continue;
 
-    const guess = room.guesses.get(player.id) ?? 50;
+    const guess = room.guesses.get(player.id) ?? GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE;
     const diff = Math.abs(guess - selfRating);
-    const points = Math.max(0, 100 - diff * 2);
+    const points = Math.max(0, GAMEPLAY_CONFIG.MAX_POINTS_PER_ROUND - diff * GAMEPLAY_CONFIG.POINTS_PER_DIFF_UNIT);
 
     player.score += points;
     results.push({
@@ -269,6 +276,7 @@ function computeRoundResults(room: Room): void {
 
   room.roundResults = results;
   room.status = "round_results";
+  room.phaseDeadline = null;
 }
 
 export function nextTurn(room: Room): boolean {
@@ -293,6 +301,7 @@ export function nextTurn(room: Room): boolean {
   room.guesses = new Map();
   room.roundResults = null;
   room.rerollUsedThisTurn = false;
+  room.phaseDeadline = null;
   pickCategoriesForTurn(room);
   return true;
 }
@@ -342,7 +351,42 @@ export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
     roundResults: room.roundResults,
     availableCategories: room.currentAvailableCategories,
     rerollUsedThisTurn: room.rerollUsedThisTurn,
+    phaseDeadline: room.phaseDeadline,
   };
+}
+
+export function leaveRoom(room: Room, playerId: string): { success: boolean; roomDeleted: boolean } {
+  const playerIndex = room.players.findIndex((p) => p.id === playerId);
+  if (playerIndex === -1) return { success: false, roomDeleted: false };
+
+  const wasHost = room.players[playerIndex]!.isHost;
+  const wasCurrentPlayer = room.currentPlayerIndex === playerIndex;
+
+  room.players.splice(playerIndex, 1);
+
+  if (room.players.length === 0) {
+    rooms.delete(room.code);
+    return { success: true, roomDeleted: true };
+  }
+
+  if (wasHost) {
+    room.players[0]!.isHost = true;
+    room.hostId = room.players[0]!.id;
+  }
+
+  if (playerIndex < room.currentPlayerIndex) {
+    room.currentPlayerIndex--;
+  } else if (wasCurrentPlayer) {
+    if (room.currentPlayerIndex >= room.players.length) {
+      room.currentPlayerIndex = 0;
+    }
+  }
+
+  if (room.status !== "waiting" && room.status !== "game_over" && room.players.length < 2) {
+    room.status = "game_over";
+  }
+
+  return { success: true, roomDeleted: false };
 }
 
 export function cleanupRoom(roomCode: string): void {

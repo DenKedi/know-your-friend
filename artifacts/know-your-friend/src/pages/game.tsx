@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useGameSocket } from "@/hooks/use-game-socket";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 const MARKER_COLORS = [
   { bg: "#FF4B8B", text: "#fff" },
@@ -102,7 +103,7 @@ export default function Game() {
     <div className="min-h-[100dvh] flex flex-col bg-background">
       {/* Header */}
       <header className="px-4 py-3 flex items-center justify-between border-b border-border bg-card shrink-0 gap-2">
-        <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="px-2">
+        <Button variant="ghost" size="sm" onClick={() => { send({ type: "leave_room" }); setLocation("/"); }} className="px-2">
           {t("game.leave")}
         </Button>
         <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
@@ -213,6 +214,11 @@ export default function Game() {
                 <CardContent className="px-4 pt-4 pb-5">
                   {!hasSubmitted ? (
                     <>
+                      {state.phaseDeadline != null && (
+                        <div className="flex justify-center mb-2">
+                          <CountdownTimer deadline={state.phaseDeadline} />
+                        </div>
+                      )}
                       <GameSlider
                         value={sliderValue}
                         onChange={setSliderValue}
@@ -264,6 +270,11 @@ export default function Game() {
                 {!isCurrentPlayer ? (
                   !hasSubmitted ? (
                     <>
+                      {state.phaseDeadline != null && (
+                        <div className="flex justify-center mb-2">
+                          <CountdownTimer deadline={state.phaseDeadline} />
+                        </div>
+                      )}
                       <GameSlider
                         value={sliderValue}
                         onChange={setSliderValue}
@@ -479,6 +490,66 @@ export default function Game() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ── Countdown Timer ────────────────────────────────────────────────────────
+
+const TIMER_TOTAL_MS = 60_000; // mirrors GAMEPLAY_CONFIG.SELF_RATING_TIMEOUT_MS / GUESSING_TIMEOUT_MS
+
+function CountdownTimer({ deadline }: { deadline: number }) {
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [remaining, setRemaining] = useState(() => Math.max(0, deadline - Date.now()));
+  const { t } = useI18n();
+
+  useEffect(() => {
+    setRemaining(Math.max(0, deadline - Date.now()));
+    intervalRef.current = setInterval(() => {
+      const left = Math.max(0, deadline - Date.now());
+      setRemaining(left);
+      if (left === 0 && intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+      }
+    }, 200);
+    return () => {
+      if (intervalRef.current !== null) clearInterval(intervalRef.current);
+    };
+  }, [deadline]);
+
+  const seconds = Math.ceil(remaining / 1000);
+  const progress = remaining / TIMER_TOTAL_MS; // 1 → 0
+  const isUrgent = remaining <= 10_000;
+
+  // SVG ring parameters
+  const r = 18;
+  const circumference = 2 * Math.PI * r;
+  const dashOffset = circumference * (1 - progress);
+
+  return (
+    <div className={cn("flex items-center gap-2", isUrgent ? "text-destructive" : "text-muted-foreground")}>
+      <svg width={48} height={48} className="shrink-0 -rotate-90">
+        {/* background ring */}
+        <circle cx={24} cy={24} r={r} fill="none" strokeWidth={4} className="stroke-border" />
+        {/* progress ring */}
+        <circle
+          cx={24}
+          cy={24}
+          r={r}
+          fill="none"
+          strokeWidth={4}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          className={cn(
+            "transition-all duration-200",
+            isUrgent ? "stroke-destructive" : "stroke-primary",
+          )}
+        />
+      </svg>
+      <span className="tabular-nums font-black text-2xl w-10 text-center">
+        {t("game.timerSeconds", { seconds })}
+      </span>
     </div>
   );
 }

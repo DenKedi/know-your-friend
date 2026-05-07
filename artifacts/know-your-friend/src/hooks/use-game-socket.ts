@@ -9,6 +9,8 @@ export type GameRoomState = RoomState & {
   rerollUsedThisTurn?: boolean;
   pendingGuesserIds?: string[];
   guessedPlayerIds?: string[];
+  /** Epoch-ms deadline for the current timed phase, or null when no timer is active. */
+  phaseDeadline?: number | null;
 };
 
 type OutgoingMessage =
@@ -18,7 +20,8 @@ type OutgoingMessage =
   | { type: "submit_guess"; guess: number }
   | { type: "next_turn" }
   | { type: "reroll_categories" }
-  | { type: "end_game_early" };
+  | { type: "end_game_early" }
+  | { type: "leave_room" };
 
 type IncomingMessage =
   | { type: "state"; state: GameRoomState }

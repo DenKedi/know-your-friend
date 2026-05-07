@@ -32,6 +32,11 @@ export default function Lobby() {
   const me = state.players.find((p) => p.id === playerId);
   const isHost = me?.isHost;
 
+  const handleLeave = () => {
+    send({ type: "leave_room" });
+    setLocation("/");
+  };
+
   return (
     <div className="min-h-[100dvh] px-4 py-8 flex flex-col items-center">
 
@@ -97,6 +102,14 @@ export default function Lobby() {
           )}
         </CardContent>
       </Card>
+
+      <Button
+        variant="ghost"
+        onClick={handleLeave}
+        className="mt-4 text-muted-foreground hover:text-destructive"
+      >
+        {state.players.length === 1 ? t("lobby.abandonRoom") : t("lobby.leaveRoom")}
+      </Button>
     </div>
   );
 }

@@ -12,10 +12,69 @@ import {
   nextTurn,
   rerollCategories,
   endGameAfterCurrentRound,
+  leaveRoom,
   getRoomStateForClient,
 } from "./game-engine";
+import { GAMEPLAY_CONFIG } from "./gameplay-config";
 
 const roomClients = new Map<string, Map<string, WebSocket>>();
+
+// ── Phase timers ───────────────────────────────────────────────────────────
+const roomTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function clearRoomTimer(roomCode: string): void {
+  const id = roomTimers.get(roomCode);
+  if (id !== undefined) {
+    clearTimeout(id);
+    roomTimers.delete(roomCode);
+  }
+}
+
+/**
+ * Schedule an auto-submit timer for the current phase of a room.
+ * Called after every phase transition – clears any existing timer and sets
+ * a new one that matches the current phase.
+ */
+function schedulePhaseTimer(roomCode: string): void {
+  clearRoomTimer(roomCode);
+
+  const room = getRoom(roomCode);
+  if (!room || !room.phaseDeadline) return;
+
+  const delayMs = Math.max(0, room.phaseDeadline - Date.now());
+
+  if (room.status === "self_rating") {
+    roomTimers.set(
+      roomCode,
+      setTimeout(() => {
+        const r = getRoom(roomCode);
+        if (!r || r.status !== "self_rating") return;
+        logger.info({ roomCode }, "self_rating timer expired – auto-submitting");
+        submitSelfRating(r, GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE);
+        broadcastState(roomCode);
+        schedulePhaseTimer(roomCode); // transition to guessing → schedule guessing timer
+      }, delayMs),
+    );
+  } else if (room.status === "guessing") {
+    roomTimers.set(
+      roomCode,
+      setTimeout(() => {
+        const r = getRoom(roomCode);
+        if (!r || r.status !== "guessing") return;
+        logger.info({ roomCode }, "guessing timer expired – auto-submitting remaining players");
+        const currentPlayer = r.players[r.currentPlayerIndex];
+        for (const player of r.players) {
+          if (player.id === currentPlayer?.id) continue;
+          if (!r.guesses.has(player.id)) {
+            submitGuess(r, player.id, GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE);
+            if (r.status !== "guessing") break; // computeRoundResults finished early
+          }
+        }
+        broadcastState(roomCode);
+      }, delayMs),
+    );
+  }
+}
 
 function broadcastToRoom(roomCode: string, message: unknown): void {
   const clients = roomClients.get(roomCode);
@@ -133,6 +192,7 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
             return;
           }
           broadcastState(roomCode);
+          schedulePhaseTimer(roomCode);
           break;
         }
         case "submit_self_rating": {
@@ -147,6 +207,7 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
             return;
           }
           broadcastState(roomCode);
+          schedulePhaseTimer(roomCode);
           break;
         }
         case "submit_guess": {
@@ -175,6 +236,7 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
             return;
           }
           broadcastState(roomCode);
+          clearRoomTimer(roomCode);
           break;
         }
         case "reroll_categories": {
@@ -203,6 +265,25 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
           broadcastState(roomCode);
           break;
         }
+        case "leave_room": {
+          // Remove from tracked clients first so the leaving player doesn't
+          // receive the broadcast sent to remaining players.
+          const clients = roomClients.get(roomCode);
+          if (clients) {
+            clients.delete(currentPlayer.id);
+            if (clients.size === 0) {
+              roomClients.delete(roomCode);
+            }
+          }
+          const { success, roomDeleted } = leaveRoom(currentRoom, currentPlayer.id);
+          if (!success) return;
+          ws.close(1000, "left_room");
+          if (!roomDeleted) {
+            broadcastState(roomCode);
+          }
+          logger.info({ roomCode, playerId: currentPlayer.id }, "Player left room");
+          break;
+        }
         default:
           ws.send(JSON.stringify({ type: "error", message: `Unknown message type: ${msg.type}` }));
       }
@@ -214,6 +295,7 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
         clients.delete(player.id);
         if (clients.size === 0) {
           roomClients.delete(roomCode);
+          clearRoomTimer(roomCode);
         }
       }
       logger.info({ roomCode, playerId: player.id }, "Player disconnected");

@@ -11,6 +11,10 @@ import {
   useI18n,
 } from "@/lib/i18n";
 
+const SESSION_KEY = "kyf_admin_auth";
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "haw-hamburg-2026";
+
 interface TranslationFields {
   label: string;
   leftLabel: string;
@@ -72,6 +76,88 @@ function previewTranslation(translations: CategoryTranslations, language: Langua
 }
 
 export default function Admin() {
+  const { t } = useI18n();
+  const [authenticated, setAuthenticated] = useState(() =>
+    import.meta.env.DEV || sessionStorage.getItem(SESSION_KEY) === "1",
+  );
+
+  if (!authenticated) {
+    return (
+      <AdminLogin
+        onSuccess={() => {
+          sessionStorage.setItem(SESSION_KEY, "1");
+          setAuthenticated(true);
+        }}
+      />
+    );
+  }
+
+  return <AdminPanel />;
+}
+
+function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
+  const { t } = useI18n();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (username === ADMIN_USER && password === ADMIN_PASS) {
+      setError(false);
+      onSuccess();
+    } else {
+      setError(true);
+    }
+  }
+
+  return (
+    <div className="min-h-[100dvh] bg-background flex items-center justify-center px-4">
+      <Card className="w-full max-w-sm border border-border">
+        <CardHeader className="pb-3 pt-5 px-5">
+          <CardTitle className="text-lg font-black uppercase tracking-tight text-primary">
+            {t("admin.login.title")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-5 pb-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-xs font-bold uppercase text-muted-foreground">
+                {t("admin.login.usernameLabel")}
+              </label>
+              <Input
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase text-muted-foreground">
+                {t("admin.login.passwordLabel")}
+              </label>
+              <Input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {error && (
+              <p className="text-sm text-destructive font-semibold">
+                {t("admin.login.error")}
+              </p>
+            )}
+            <Button type="submit" className="w-full font-bold">
+              {t("admin.login.submit")}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AdminPanel() {
   const { toast } = useToast();
   const { language, t } = useI18n();
   const [items, setItems] = useState<Category[]>([]);
