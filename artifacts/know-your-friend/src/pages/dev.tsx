@@ -222,6 +222,7 @@ function buildMockState(screen: ScreenId, cfg: MockConfig): GameRoomState & { __
     players:    MOCK_PLAYERS,
     currentRound:  cfg.currentRound,
     totalRounds:   cfg.totalRounds,
+    roundsPerPlayer: 5,
     currentPlayerId,
     currentCategory:          MOCK_CATEGORIES[0]!.id,
     currentCategoryLabel:     MOCK_CATEGORIES[0]!.label,
