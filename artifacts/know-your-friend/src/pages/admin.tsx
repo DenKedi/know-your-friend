@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +9,7 @@ import {
   type LanguageCode,
   useI18n,
 } from "@/lib/i18n";
+import fireIcon from "@/assets/icons/Fire_1.png";
 
 const SESSION_KEY = "kyf_admin_auth";
 const ADMIN_USER = "admin";
@@ -112,27 +112,34 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background flex items-center justify-center px-4">
-      <Card className="w-full max-w-sm border border-border">
-        <CardHeader className="pb-3 pt-5 px-5">
-          <CardTitle className="text-lg font-black uppercase tracking-tight text-primary">
+    <div className="relative z-10 min-h-[100dvh] flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="flex items-center gap-2.5 justify-center mb-8">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl shadow-lg overflow-hidden">
+            <img src={fireIcon} alt="" className="h-full w-full object-cover" />
+          </span>
+          <span className="font-extrabold tracking-tight text-base">Know Your Friend</span>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-background/40 backdrop-blur-xl p-6 shadow-2xl space-y-5">
+          <h1 className="text-lg font-black uppercase tracking-tight text-primary">
             {t("admin.login.title")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-5 pb-5">
+          </h1>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-xs font-bold uppercase text-muted-foreground">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/50">
                 {t("admin.login.usernameLabel")}
               </label>
               <Input
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                className="bg-white/5 border-white/10 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
-            <div>
-              <label className="text-xs font-bold uppercase text-muted-foreground">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/50">
                 {t("admin.login.passwordLabel")}
               </label>
               <Input
@@ -140,6 +147,7 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="bg-white/5 border-white/10 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
             {error && (
@@ -147,12 +155,16 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
                 {t("admin.login.error")}
               </p>
             )}
-            <Button type="submit" className="w-full font-bold">
+            <button
+              type="submit"
+              className="w-full overflow-hidden rounded-full py-3 text-sm font-extrabold tracking-wide text-primary-foreground shadow-xl transition-all hover:-translate-y-0.5 hover:shadow-2xl active:translate-y-0"
+              style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
+            >
               {t("admin.login.submit")}
-            </Button>
+            </button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
@@ -252,72 +264,103 @@ function AdminPanel() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background px-4 py-6">
-      <div className="max-w-5xl mx-auto">
-        <header className="flex items-center justify-between mb-6 gap-3">
-          <div>
-            <h1 className="text-2xl font-black uppercase tracking-tight text-primary">
-              {t("admin.title")}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {t("admin.subtitle", { count: items.length })}
-            </p>
+    <div className="relative z-10 min-h-[100dvh] flex flex-col">
+      {/* ── Header ───────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 backdrop-blur-xl bg-background/30 border-b border-white/10">
+        <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl shadow-lg overflow-hidden" aria-hidden>
+              <img src={fireIcon} alt="" className="h-full w-full object-cover" />
+            </span>
+            <div className="flex items-baseline gap-2">
+              <h1
+                className="text-xl font-black uppercase tracking-tight bg-clip-text text-transparent"
+                style={{ backgroundImage: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
+              >
+                {t("admin.title")}
+              </h1>
+              <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-widest text-foreground/40">
+                {t("admin.subtitle", { count: items.length })}
+              </span>
+            </div>
           </div>
-          <Link href="/" className="text-sm font-bold text-muted-foreground hover:text-foreground">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold text-foreground/80 border border-white/15 bg-white/5 backdrop-blur-md transition-all hover:bg-white/10"
+          >
             ← {t("common.back")}
           </Link>
-        </header>
+        </div>
+      </header>
 
-        <Card className="mb-4 border border-border bg-card/60">
-          <CardContent className="p-4 text-sm text-muted-foreground">
-            {t("admin.requirement")}
-          </CardContent>
-        </Card>
-
-        <div className="flex gap-2 mb-4">
-          <Button onClick={() => setShowNew((value) => !value)} className="font-bold">
-            {t("admin.newCategory")}
-          </Button>
-          <Button variant="outline" onClick={resetAll} className="font-bold ml-auto">
-            {t("admin.reset")}
-          </Button>
+      {/* ── Body ─────────────────────────────────────────────── */}
+      <main className="mx-auto max-w-5xl w-full px-4 py-6 flex-1">
+        {/* Requirement notice */}
+        <div className="mb-4 rounded-xl border border-white/10 bg-background/30 backdrop-blur-md px-4 py-3 text-sm text-foreground/60">
+          {t("admin.requirement")}
         </div>
 
+        {/* Action bar */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setShowNew((value) => !value)}
+            className="rounded-full px-5 py-2 text-sm font-bold text-primary-foreground shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
+          >
+            {t("admin.newCategory")}
+          </button>
+          <button
+            onClick={resetAll}
+            className="ml-auto rounded-full px-5 py-2 text-sm font-bold text-foreground/70 border border-white/15 bg-white/5 backdrop-blur-md transition-all hover:bg-white/10"
+          >
+            {t("admin.reset")}
+          </button>
+        </div>
+
+        {/* New category form */}
         {showNew && (
-          <Card className="mb-4 border-2 border-primary">
-            <CardHeader className="pb-3 pt-4 px-4">
-              <CardTitle className="text-base">{t("admin.newCategoryTitle")}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 space-y-4">
-              <div>
-                <label className="text-xs font-bold uppercase text-muted-foreground">{t("admin.idLabel")}</label>
-                <Input
-                  value={draft.id}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      id: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
-                    }))
-                  }
-                  placeholder="z.B. lieblings_eis"
-                />
-              </div>
-
-              <TranslationEditor
-                translations={draft.translations}
-                onChange={(translations) => setDraft((current) => ({ ...current, translations }))}
+          <div className="mb-4 rounded-2xl border-2 border-primary/60 bg-background/40 backdrop-blur-xl p-4 space-y-4 shadow-xl">
+            <h2 className="text-sm font-black uppercase tracking-wide text-primary">{t("admin.newCategoryTitle")}</h2>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/50">{t("admin.idLabel")}</label>
+              <Input
+                value={draft.id}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    id: event.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
+                  }))
+                }
+                placeholder="z.B. lieblings_eis"
+                className="bg-white/5 border-white/10 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0"
               />
+            </div>
 
-              <div className="flex gap-2 pt-2">
-                <Button onClick={saveNew} className="flex-1 font-bold">{t("common.save")}</Button>
-                <Button variant="outline" onClick={() => setShowNew(false)}>{t("common.cancel")}</Button>
-              </div>
-            </CardContent>
-          </Card>
+            <TranslationEditor
+              translations={draft.translations}
+              onChange={(translations) => setDraft((current) => ({ ...current, translations }))}
+            />
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={saveNew}
+                className="flex-1 rounded-full py-2 text-sm font-bold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5"
+                style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
+              >
+                {t("common.save")}
+              </button>
+              <button
+                onClick={() => setShowNew(false)}
+                className="rounded-full px-5 py-2 text-sm font-bold text-foreground/70 border border-white/15 bg-white/5 transition-all hover:bg-white/10"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
         )}
 
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">{t("common.loading")}</div>
+          <div className="text-center py-16 text-foreground/40 font-bold animate-pulse">{t("common.loading")}</div>
         ) : (
           <div className="space-y-2">
             {items.map((category) => (
@@ -334,7 +377,7 @@ function AdminPanel() {
             ))}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
@@ -361,35 +404,38 @@ function TranslationEditor({
 
   return (
     <div className="space-y-3">
-      <div className="text-xs text-muted-foreground font-bold">
+      <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground/50">
         {t("admin.completeness", { count: countCompletedLanguages(normalized) })}
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {LANGUAGE_OPTIONS.map((option) => (
-          <div key={option.code} className="rounded-xl border border-border p-3 space-y-2 bg-input/40">
-            <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <div key={option.code} className="rounded-xl border border-white/10 p-3 space-y-2 bg-white/5">
+            <div className="text-xs font-bold uppercase tracking-wide text-foreground/60">
               {t("admin.languageSection", { flag: option.flag, language: option.label })}
             </div>
             <div>
-              <label className="text-[10px] font-bold uppercase text-muted-foreground">{t("admin.translationLabel")}</label>
+              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground/40">{t("admin.translationLabel")}</label>
               <Input
                 value={normalized[option.code].label}
                 onChange={(event) => updateField(option.code, "label", event.target.value)}
+                className="bg-white/5 border-white/10 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] font-bold uppercase text-muted-foreground">{t("admin.leftLabel")}</label>
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground/40">{t("admin.leftLabel")}</label>
                 <Input
                   value={normalized[option.code].leftLabel}
                   onChange={(event) => updateField(option.code, "leftLabel", event.target.value)}
+                  className="bg-white/5 border-white/10 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase text-muted-foreground">{t("admin.rightLabel")}</label>
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground/40">{t("admin.rightLabel")}</label>
                 <Input
                   value={normalized[option.code].rightLabel}
                   onChange={(event) => updateField(option.code, "rightLabel", event.target.value)}
+                  className="bg-white/5 border-white/10 focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               </div>
             </div>
@@ -431,40 +477,61 @@ function CategoryRow({
 
   if (editing) {
     return (
-      <Card className="border-2 border-primary">
-        <CardContent className="p-3 space-y-3">
-          <TranslationEditor translations={translations} onChange={setTranslations} />
-          <div className="flex gap-2 pt-1">
-            <Button size="sm" onClick={() => onSave(translations)} className="flex-1 font-bold">
-              {t("common.save")}
-            </Button>
-            <Button size="sm" variant="outline" onClick={onCancel}>{t("common.cancel")}</Button>
-          </div>
-          <div className="text-[10px] text-muted-foreground">id: {category.id}</div>
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border-2 border-primary/60 bg-background/40 backdrop-blur-xl p-4 space-y-3 shadow-xl">
+        <TranslationEditor translations={translations} onChange={setTranslations} />
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={() => onSave(translations)}
+            className="flex-1 rounded-full py-2 text-sm font-bold text-primary-foreground shadow-md transition-all hover:-translate-y-0.5"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
+          >
+            {t("common.save")}
+          </button>
+          <button
+            onClick={onCancel}
+            className="rounded-full px-5 py-2 text-sm font-bold text-foreground/70 border border-white/15 bg-white/5 transition-all hover:bg-white/10"
+          >
+            {t("common.cancel")}
+          </button>
+        </div>
+        <div className="text-[10px] text-foreground/30 font-mono">id: {category.id}</div>
+      </div>
     );
   }
 
   return (
-    <Card className="border border-border">
-      <CardContent className="p-3 flex items-center gap-3">
+    <div className="rounded-xl border border-white/10 bg-background/30 backdrop-blur-md hover:bg-background/40 transition-colors">
+      <div className="p-3 flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <div className="font-bold text-sm truncate">{preview.label || category.id}</div>
-          <div className="text-xs text-muted-foreground truncate">
-            <span className="text-primary">{preview.leftLabel}</span> ↔ <span className="text-secondary">{preview.rightLabel}</span>
+          <div className="text-xs text-foreground/50 truncate">
+            <span className="text-primary/80">{preview.leftLabel}</span>
+            <span className="text-foreground/30 mx-1">↔</span>
+            <span className="text-secondary/80">{preview.rightLabel}</span>
           </div>
-          <div className="text-[10px] text-muted-foreground/70 font-mono mt-0.5">{category.id}</div>
-          <div className="text-[10px] text-muted-foreground mt-1">
+          <div className="text-[10px] text-foreground/30 font-mono mt-0.5">{category.id}</div>
+          <div className="text-[10px] text-foreground/40 mt-1">
             {t("admin.completeness", { count: countCompletedLanguages(category.translations) })}
-            {missing.length > 0 ? ` · ${t("admin.missing", { languages: missing.join(", ") })}` : ""}
+            {missing.length > 0 ? (
+              <span className="text-destructive/70"> · {t("admin.missing", { languages: missing.join(", ") })}</span>
+            ) : null}
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onStartEdit}>{t("admin.edit")}</Button>
-          <Button size="sm" variant="ghost" onClick={onDelete} className="text-destructive">×</Button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={onStartEdit}
+            className="rounded-full px-3 py-1.5 text-xs font-bold text-foreground/70 border border-white/15 bg-white/5 transition-all hover:bg-white/10"
+          >
+            {t("admin.edit")}
+          </button>
+          <button
+            onClick={onDelete}
+            className="rounded-full px-3 py-1.5 text-xs font-bold text-destructive/70 border border-destructive/20 bg-destructive/5 transition-all hover:bg-destructive/10"
+          >
+            ×
+          </button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
