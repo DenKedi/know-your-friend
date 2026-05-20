@@ -24,6 +24,17 @@ import {
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
+// Keep the wood texture decoded in memory. When the browser re-rasterizes
+// composited layers (e.g. on zoom in/out), the texture would otherwise be
+// re-decoded from disk and the layer can flash empty for a frame.
+const woodTextureLoader = new Image();
+woodTextureLoader.decoding = "sync";
+woodTextureLoader.src = woodTexture;
+// Wood-toned fallback so any transient layer-cache miss shows brown instead
+// of pure black bleeding through the dark scene background.
+const WOOD_FALLBACK_BG = "#6b431c";
+const WOOD_DARK_FALLBACK_BG = "#1a0f06";
+
 const MARKER_COLORS = [
   { bg: "#FF4B8B", text: "#fff" },
   { bg: "#00C8E8", text: "#111" },
@@ -699,6 +710,7 @@ function CategorySignpost({
             phase === "spin" && rerollAvailable ? "reroll-spinning" : "",
           )}
           style={{
+            backgroundColor: WOOD_FALLBACK_BG,
             backgroundImage: `url(${woodTexture})`,
             backgroundSize: "260%",
             backgroundPosition: "center 58%",
@@ -777,6 +789,7 @@ function WoodenSign({
           style={{
             clipPath,
             transform: `translateZ(${z}px)`,
+            backgroundColor: WOOD_DARK_FALLBACK_BG,
             backgroundImage: `url(${woodTexture})`,
             backgroundSize: "160% auto",
             backgroundPosition: bgPos,
@@ -792,6 +805,7 @@ function WoodenSign({
         style={{
           clipPath,
           transform: "translateZ(9px)",
+          backgroundColor: WOOD_FALLBACK_BG,
           backgroundImage: `url(${woodTexture})`,
           backgroundSize: "160% auto",
           backgroundPosition: bgPos,
