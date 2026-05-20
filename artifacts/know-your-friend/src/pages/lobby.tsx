@@ -76,7 +76,7 @@ export default function Lobby() {
 
               <div className="flex items-center gap-1.5">
                 <span className="hidden sm:inline text-[10px] font-bold uppercase text-foreground/50 tracking-wider">
-                  Rounds
+                  {t("lobby.rounds")}
                 </span>
                 {isHost ? (
                   <select
