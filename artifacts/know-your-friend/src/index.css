@@ -207,3 +207,41 @@
   animation: scene-label-in 500ms ease-out both;
   opacity: 0;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Wooden signpost (category picker)                                      */
+/* ---------------------------------------------------------------------- */
+
+@keyframes sign-enter-from-left {
+  0%   { transform: translateX(-120vw) rotate(-18deg); opacity: 0; }
+  70%  { transform: translateX(8px) rotate(3deg);      opacity: 1; }
+  85%  { transform: translateX(-4px) rotate(-1.5deg); }
+  100% { transform: translateX(0) rotate(0);           opacity: 1; }
+}
+
+@keyframes sign-enter-from-right {
+  0%   { transform: translateX(120vw) rotate(18deg);  opacity: 0; }
+  70%  { transform: translateX(-8px) rotate(-3deg);   opacity: 1; }
+  85%  { transform: translateX(4px) rotate(1.5deg); }
+  100% { transform: translateX(0) rotate(0);          opacity: 1; }
+}
+
+@keyframes sign-spin-right {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(1080deg); } /* 3 full turns */
+}
+@keyframes sign-spin-left {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(-1080deg); } /* 3 full turns */
+}
+
+.sign-enter-from-left  { animation: sign-enter-from-left  650ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.sign-enter-from-right { animation: sign-enter-from-right 650ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.sign-spin-right       { animation: sign-spin-right 1200ms cubic-bezier(0.2, 0.6, 0.2, 1) both; }
+.sign-spin-left        { animation: sign-spin-left  1200ms cubic-bezier(0.2, 0.6, 0.2, 1) both; }
+
+@keyframes reroll-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(1080deg); }
+}
+.reroll-spinning { animation: reroll-spin 1200ms cubic-bezier(0.2, 0.6, 0.2, 1) both; }

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRoute, useLocation } from "wouter";
+import woodTexture from "@/assets/images/Wood-texture.png";
 import { useGameSocket } from "@/hooks/use-game-socket";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GameSlider } from "@/components/game-slider";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -100,9 +100,9 @@ export default function Game() {
     state.currentRound < state.totalRounds;
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background">
+    <div className="min-h-[100dvh] flex flex-col select-none">
       {/* Header */}
-      <header className="px-4 py-3 flex items-center justify-between border-b border-border bg-card shrink-0 gap-2">
+      <header className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b border-white/10 backdrop-blur-xl bg-background/30 shrink-0 gap-2">
         <Button variant="ghost" size="sm" onClick={() => { send({ type: "leave_room" }); setLocation("/"); }} className="px-2">
           {t("game.leave")}
         </Button>
@@ -137,69 +137,45 @@ export default function Game() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center px-4 py-5 max-w-xl mx-auto w-full overflow-y-auto">
+      <main className="flex-1 flex flex-col items-center px-4 py-6 max-w-xl mx-auto w-full overflow-y-auto [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">
 
         {/* ── KATEGORIE WÄHLEN ─────────────────────────────────── */}
         {state.status === "category_selection" && (
-          <Card className="w-full bg-card border-2 border-border shadow-lg">
-            <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-xl text-center leading-tight">
-                {isCurrentPlayer
-                  ? t("game.selectCategory")
-                  : t("game.selectingCategory", { name: currentPlayer?.name ?? "-" })}
-              </CardTitle>
-              {isCurrentPlayer && (
-                <p className="text-sm text-center text-muted-foreground mt-1">
-                  {t("game.selfRateHint")}
-                </p>
-              )}
-            </CardHeader>
-            <CardContent className="px-4 pb-5">
-              {isCurrentPlayer ? (
-                <div className="space-y-2.5">
-                  {state.availableCategories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleSelectCategory(cat.id)}
-                      className="w-full text-left bg-input hover:bg-input/70 active:scale-[0.98] transition-all rounded-xl p-4 border-2 border-transparent hover:border-primary/40 group"
-                    >
-                      <div className="font-black text-lg text-foreground group-hover:text-primary transition-colors">
-                        {cat.label}
-                      </div>
-                      <div className="flex items-center justify-between gap-2 mt-1">
-                        <span className="text-xs font-semibold text-primary truncate">
-                          {cat.leftLabel}
-                        </span>
-                        <span className="text-xs font-semibold text-secondary truncate text-right">
-                          {cat.rightLabel}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                  <Button
-                    variant="outline"
-                    onClick={() => send({ type: "reroll_categories" })}
-                    disabled={state.rerollUsedThisTurn}
-                    className="w-full mt-1 font-bold"
-                  >
-                    {state.rerollUsedThisTurn ? t("game.rerollUsed") : t("game.reroll")}
-                  </Button>
-                </div>
-              ) : (
-                <div className="py-8 flex flex-col items-center gap-4">
-                  <div className="w-14 h-14 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-                  <p className="text-sm text-muted-foreground font-semibold">{t("game.waiting")}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <section className="w-full">
+            <h2 className="text-2xl font-black text-center leading-tight">
+              {isCurrentPlayer
+                ? t("game.selectCategory")
+                : t("game.selectingCategory", { name: currentPlayer?.name ?? "-" })}
+            </h2>
+            {isCurrentPlayer && (
+              <p className="text-sm text-center text-muted-foreground mt-1 mb-5">
+                {t("game.selfRateHint")}
+              </p>
+            )}
+
+            {isCurrentPlayer ? (
+              <CategorySignpost
+                categories={state.availableCategories}
+                rerollAvailable={!state.rerollUsedThisTurn}
+                onSelect={handleSelectCategory}
+                onReroll={() => send({ type: "reroll_categories" })}
+                rerollUsedLabel={t("game.rerollUsed")}
+                rerollLabel={t("game.reroll")}
+              />
+            ) : (
+              <div className="py-10 flex flex-col items-center gap-4">
+                <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                <p className="text-sm text-muted-foreground font-semibold">{t("game.waiting")}</p>
+              </div>
+            )}
+          </section>
         )}
 
         {/* ── SELBSTEINSCHÄTZUNG ───────────────────────────────── */}
         {state.status === "self_rating" && (
-          <div className="w-full space-y-4">
-            <div className="text-center px-2">
-              <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
+          <section className="w-full space-y-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">
                 {state.currentCategoryLabel}
               </h2>
               <p className="text-base text-muted-foreground mt-1">
@@ -210,52 +186,46 @@ export default function Game() {
             </div>
 
             {isCurrentPlayer ? (
-              <Card className="border-2 border-border shadow-lg">
-                <CardContent className="px-4 pt-4 pb-5">
-                  {!hasSubmitted ? (
-                    <>
-                      {state.phaseDeadline != null && (
-                        <div className="flex justify-center mb-2">
-                          <CountdownTimer deadline={state.phaseDeadline} />
-                        </div>
-                      )}
-                      <GameSlider
-                        value={sliderValue}
-                        onChange={setSliderValue}
-                        leftLabel={state.currentCategoryLeftLabel}
-                        rightLabel={state.currentCategoryRightLabel}
-                        showValue
-                      />
-                      <Button
-                        className="w-full py-7 text-lg font-black mt-4 rounded-xl"
-                        onClick={handleSubmitRating}
-                      >
-                        {t("game.lockIn")}
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="py-10 text-center space-y-2">
-                      <div className="text-4xl font-black text-primary">{sliderValue}</div>
-                      <p className="text-muted-foreground font-semibold">
-                        {t("game.hidden")}
-                      </p>
+              !hasSubmitted ? (
+                <>
+                  {state.phaseDeadline != null && (
+                    <div className="flex justify-center">
+                      <CountdownTimer deadline={state.phaseDeadline} />
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                  <GameSlider
+                    value={sliderValue}
+                    onChange={setSliderValue}
+                    leftLabel={state.currentCategoryLeftLabel}
+                    rightLabel={state.currentCategoryRightLabel}
+                    showValue
+                  />
+                  <Button
+                    className="w-full py-6 text-lg font-black rounded-full"
+                    onClick={handleSubmitRating}
+                  >
+                    {t("game.lockIn")}
+                  </Button>
+                </>
+              ) : (
+                <div className="py-10 text-center space-y-2">
+                  <div className="text-6xl font-black text-primary">{sliderValue}</div>
+                  <p className="text-muted-foreground font-semibold">{t("game.hidden")}</p>
+                </div>
+              )
             ) : (
               <div className="flex justify-center py-10">
                 <div className="w-20 h-20 rounded-full border-8 border-primary border-t-transparent animate-spin" />
               </div>
             )}
-          </div>
+          </section>
         )}
 
         {/* ── RATEN ───────────────────────────────────────────── */}
         {state.status === "guessing" && (
-          <div className="w-full space-y-4">
-            <div className="text-center px-2">
-              <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
+          <section className="w-full space-y-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">
                 {state.currentCategoryLabel}
               </h2>
               <p className="text-base text-muted-foreground mt-1">
@@ -265,73 +235,64 @@ export default function Game() {
               </p>
             </div>
 
-            <Card className="border-2 border-border shadow-lg">
-              <CardContent className="px-4 pt-4 pb-5">
-                {!isCurrentPlayer ? (
-                  !hasSubmitted ? (
-                    <>
-                      {state.phaseDeadline != null && (
-                        <div className="flex justify-center mb-2">
-                          <CountdownTimer deadline={state.phaseDeadline} />
-                        </div>
-                      )}
-                      <GameSlider
-                        value={sliderValue}
-                        onChange={setSliderValue}
-                        leftLabel={state.currentCategoryLeftLabel}
-                        rightLabel={state.currentCategoryRightLabel}
-                        showValue
-                      />
-                      <Button
-                        className="w-full py-7 text-lg font-black mt-4 rounded-xl"
-                        onClick={handleSubmitGuess}
-                      >
-                        {t("game.submitGuess")}
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="py-6 text-center space-y-2">
-                      <div className="text-4xl font-black text-primary">
-                        {state.guessesSubmitted}/{state.guessesTotal}
-                      </div>
-                      <p className="text-muted-foreground font-semibold">
-                        {t("game.guessSubmitted")}
-                      </p>
+            {!isCurrentPlayer ? (
+              !hasSubmitted ? (
+                <>
+                  {state.phaseDeadline != null && (
+                    <div className="flex justify-center">
+                      <CountdownTimer deadline={state.phaseDeadline} />
                     </div>
-                  )
-                ) : (
-                  <div className="py-6 flex flex-col items-center gap-3">
-                    <div className="text-5xl font-black text-primary tabular-nums">
-                      {state.guessesSubmitted}/{state.guessesTotal}
-                    </div>
-                    <div className="text-muted-foreground font-bold uppercase tracking-wider text-sm">
-                      {t("game.guessesReceived")}
-                    </div>
-                    <div className="w-full bg-input rounded-full h-2 mt-2">
-                      <div
-                        className="bg-primary h-2 rounded-full transition-all duration-500"
-                        style={{
-                          width: `${state.guessesTotal > 0 ? (state.guessesSubmitted / state.guessesTotal) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
+                  )}
+                  <GameSlider
+                    value={sliderValue}
+                    onChange={setSliderValue}
+                    leftLabel={state.currentCategoryLeftLabel}
+                    rightLabel={state.currentCategoryRightLabel}
+                    showValue
+                  />
+                  <Button
+                    className="w-full py-6 text-lg font-black rounded-full"
+                    onClick={handleSubmitGuess}
+                  >
+                    {t("game.submitGuess")}
+                  </Button>
+                </>
+              ) : (
+                <div className="py-6 text-center space-y-2">
+                  <div className="text-5xl font-black text-primary">
+                    {state.guessesSubmitted}/{state.guessesTotal}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <p className="text-muted-foreground font-semibold">{t("game.guessSubmitted")}</p>
+                </div>
+              )
+            ) : (
+              <div className="py-6 flex flex-col items-center gap-3">
+                <div className="text-6xl font-black text-primary tabular-nums">
+                  {state.guessesSubmitted}/{state.guessesTotal}
+                </div>
+                <div className="text-muted-foreground font-bold uppercase tracking-wider text-sm">
+                  {t("game.guessesReceived")}
+                </div>
+                <div className="w-full max-w-xs bg-white/10 rounded-full h-2 mt-2">
+                  <div
+                    className="bg-primary h-2 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${state.guessesTotal > 0 ? (state.guessesSubmitted / state.guessesTotal) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
-            {/* Wer fehlt noch? */}
             <PendingGuessersCard state={state} />
-          </div>
+          </section>
         )}
 
         {/* ── RUNDEN-ERGEBNIS ─────────────────────────────────── */}
         {state.status === "round_results" && state.roundResults && (
-          <div className="w-full space-y-4 animate-in fade-in duration-500">
-
-            {/* Title */}
-            <div className="text-center px-2">
-              <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
+          <section className="w-full space-y-6 animate-in fade-in duration-500">
+            <div className="text-center">
+              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">
                 {t("game.reveal")}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
@@ -342,30 +303,24 @@ export default function Game() {
               </p>
             </div>
 
-            {/* Slider reveal */}
-            <Card className="border-2 border-border shadow-lg overflow-hidden">
-              <CardContent className="px-4 pt-4 pb-5">
-                <GameSlider
-                  disabled
-                  leftLabel={state.currentCategoryLeftLabel}
-                  rightLabel={state.currentCategoryRightLabel}
-                  markers={[
-                    ...state.roundResults.map((r) => ({
-                      value: r.guess,
-                      label: r.playerName,
-                    })),
-                    {
-                      value: state.selfRating ?? 0,
-                      label: currentPlayer?.name ?? t("game.truth"),
-                      isTruth: true,
-                    },
-                  ]}
-                />
-              </CardContent>
-            </Card>
+            <GameSlider
+              disabled
+              leftLabel={state.currentCategoryLeftLabel}
+              rightLabel={state.currentCategoryRightLabel}
+              markers={[
+                ...state.roundResults.map((r) => ({
+                  value: r.guess,
+                  label: r.playerName,
+                })),
+                {
+                  value: state.selfRating ?? 0,
+                  label: currentPlayer?.name ?? t("game.truth"),
+                  isTruth: true,
+                },
+              ]}
+            />
 
-            {/* Score rows */}
-            <div className="space-y-2">
+            <div className="divide-y divide-white/10">
               {[...state.roundResults]
                 .sort((a, b) => b.points - a.points)
                 .map((r, i) => {
@@ -375,7 +330,7 @@ export default function Game() {
                   return (
                     <div
                       key={r.playerId}
-                      className="bg-card rounded-xl border border-border px-4 py-3 flex items-center justify-between animate-in slide-in-from-bottom-4"
+                      className="px-2 py-3 flex items-center justify-between animate-in slide-in-from-bottom-4"
                       style={{
                         animationDelay: `${i * 100}ms`,
                         animationFillMode: "both",
@@ -383,21 +338,18 @@ export default function Game() {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black"
+                          className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black"
                           style={{ background: color.bg, color: color.text }}
                         >
                           {r.playerName.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
                           <div className="font-bold text-base truncate">{r.playerName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            Δ {r.diff}
-                          </div>
+                          <div className="text-xs text-muted-foreground">Δ {r.diff}</div>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-2">
-                        <div className="font-black text-xl text-primary">+{r.points}</div>
-                        <div className="text-xs text-muted-foreground">{t("game.points")}</div>
+                        <div className="font-black text-2xl text-primary tabular-nums">+{r.points}</div>
                       </div>
                     </div>
                   );
@@ -413,12 +365,12 @@ export default function Game() {
 
             {/* Next button – anyone can advance */}
             <Button
-              className="w-full py-6 text-lg font-black rounded-xl mt-1"
+              className="w-full py-6 text-lg font-black rounded-full mt-2"
               onClick={handleNextTurn}
             >
               {isLastTurn ? t("game.endGame") : t("game.continue")}
             </Button>
-          </div>
+          </section>
         )}
       </main>
 
@@ -461,8 +413,8 @@ export default function Game() {
               return (
                 <div
                   key={p.id}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${
-                    isMe ? "border-primary bg-primary/5" : "border-border bg-card"
+                  className={`flex items-center gap-3 px-2 py-2.5 rounded-lg ${
+                    isMe ? "bg-primary/10" : ""
                   }`}
                 >
                   <div className="w-7 text-center font-black text-muted-foreground tabular-nums">
@@ -573,8 +525,7 @@ function PendingGuessersCard({
   if (pending.length === 0 && guessed.length === 0) return null;
 
   return (
-    <Card className="border border-border">
-      <CardContent className="px-4 py-3 space-y-2">
+    <div className="space-y-2 pt-2">
         {pending.length > 0 && (
           <div>
             <div className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1">
@@ -584,7 +535,7 @@ function PendingGuessersCard({
               {pending.map((p) => (
                 <span
                   key={p.id}
-                  className="text-xs font-bold px-2.5 py-1 rounded-full bg-input text-foreground border border-border"
+                  className="text-xs font-bold px-2.5 py-1 rounded-full bg-white/10 text-foreground"
                 >
                   ⏳ {p.name}
                 </span>
@@ -614,7 +565,263 @@ function PendingGuessersCard({
             {t("game.nextTurnLabel", { name: nextPlayer.name })}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+  );
+}
+
+// ── Wooden Signpost category picker ────────────────────────────────────────
+
+type Category = {
+  id: string;
+  label: string;
+  leftLabel: string;
+  rightLabel: string;
+};
+
+const SPIN_DURATION_MS = 1200;
+const SPIN_HALF_MS = 600;
+const SPIN_STAGGER_MS = 110;
+const ENTER_DURATION_MS = 650;
+const ENTER_STAGGER_MS = 140;
+
+function CategorySignpost({
+  categories,
+  rerollAvailable,
+  onSelect,
+  onReroll,
+  rerollLabel,
+  rerollUsedLabel,
+}: {
+  categories: Category[];
+  rerollAvailable: boolean;
+  onSelect: (id: string) => void;
+  onReroll: () => void;
+  rerollLabel: string;
+  rerollUsedLabel: string;
+}) {
+  const [displayed, setDisplayed] = useState<Category[]>(categories);
+  const [phase, setPhase] = useState<"enter" | "spin" | "idle">("enter");
+  const prevIdsRef = useRef<string>(categories.map((c) => c.id).join(","));
+
+  // End the initial enter phase after the last sign's enter animation finishes.
+  useEffect(() => {
+    const enterEnd =
+      ENTER_DURATION_MS + (categories.length - 1) * ENTER_STAGGER_MS + 40;
+    const t = setTimeout(
+      () => setPhase((p) => (p === "enter" ? "idle" : p)),
+      enterEnd,
+    );
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Trigger a spin whenever the category set actually changes.
+  useEffect(() => {
+    const newIds = categories.map((c) => c.id).join(",");
+    if (newIds === prevIdsRef.current) return;
+    prevIdsRef.current = newIds;
+    setPhase("spin");
+
+    // Swap each slot's content at the midpoint of its own (staggered) spin,
+    // so the new label appears while the sign is edge-on.
+    const swaps = categories.map((_, i) =>
+      setTimeout(
+        () =>
+          setDisplayed((prev) => {
+            const next = prev.slice();
+            next[i] = categories[i]!;
+            return next;
+          }),
+        i * SPIN_STAGGER_MS + SPIN_HALF_MS,
+      ),
+    );
+
+    // Idle only after the LAST sign actually finishes — prevents the
+    // last sign from being cut off mid-rotation.
+    const lastEnd =
+      (categories.length - 1) * SPIN_STAGGER_MS + SPIN_DURATION_MS + 40;
+    const done = setTimeout(() => setPhase("idle"), lastEnd);
+
+    return () => {
+      swaps.forEach(clearTimeout);
+      clearTimeout(done);
+    };
+  }, [categories]);
+
+  return (
+    <div className="mt-6 space-y-4" style={{ perspective: "900px" }}>
+      {displayed.map((cat, i) => {
+        // Alternating: idx 0 from right, 1 from left, 2 from right
+        const fromRight = i % 2 === 0;
+        const pointsLeft = fromRight; // arrow tip points to where the sign came from
+        const enterClass = fromRight ? "sign-enter-from-right" : "sign-enter-from-left";
+        const spinClass = fromRight ? "sign-spin-right" : "sign-spin-left";
+        const animClass =
+          phase === "spin"
+            ? spinClass
+            : phase === "enter"
+            ? enterClass
+            : "";
+        const delay =
+          phase === "spin"
+            ? i * SPIN_STAGGER_MS
+            : phase === "enter"
+            ? i * ENTER_STAGGER_MS
+            : 0;
+        return (
+          <WoodenSign
+            // Stable per-slot key: keeps the DOM node mounted across content
+            // swaps so the spin animation isn't restarted from 0deg mid-flight.
+            key={i}
+            pointsLeft={pointsLeft}
+            animationClass={animClass}
+            delay={delay}
+            textureOffsetY={[25, 58, 88][i] ?? i * 30}
+            xShiftPx={i === 1 ? 52 : 0}
+            shrinkRightPx={i === 1 ? 0 : 52}
+            onClick={() => phase === "idle" && onSelect(cat.id)}
+            title={cat.label}
+            leftLabel={cat.leftLabel}
+            rightLabel={cat.rightLabel}
+          />
+        );
+      })}
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => {
+            if (phase === "idle" && rerollAvailable) onReroll();
+          }}
+          disabled={!rerollAvailable || phase !== "idle"}
+          title={rerollAvailable ? rerollLabel : rerollUsedLabel}
+          className={cn(
+            "relative w-14 h-14 rounded-full overflow-hidden disabled:opacity-40 transition-[filter,transform] duration-150",
+            "hover:enabled:brightness-125 hover:enabled:[transform:rotate(30deg)]",
+            phase === "spin" && rerollAvailable ? "reroll-spinning" : "",
+          )}
+          style={{
+            backgroundImage: `url(${woodTexture})`,
+            backgroundSize: "260%",
+            backgroundPosition: "center 58%",
+            boxShadow:
+              "rgba(0,0,0,0.55) 0px 3px 10px, rgba(0,0,0,0.35) 0px -4px 0px inset, rgba(255,255,255,0.10) 0px 2px 0px inset",
+            filter: "brightness(0.78) saturate(0.9)",
+          }}
+        >
+          <span
+            className="absolute inset-0 flex items-center justify-center text-2xl"
+            style={{ textShadow: "0 2px 6px rgba(0,0,0,0.8)" }}
+          >
+            ↻
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WoodenSign({
+  pointsLeft,
+  animationClass,
+  delay,
+  textureOffsetY,
+  xShiftPx,
+  shrinkRightPx,
+  onClick,
+  title,
+  leftLabel,
+  rightLabel,
+}: {
+  pointsLeft: boolean;
+  animationClass: string;
+  delay: number;
+  textureOffsetY: number;
+  xShiftPx: number;
+  shrinkRightPx: number;
+  onClick: () => void;
+  title: string;
+  leftLabel: string;
+  rightLabel: string;
+}) {
+  const clipPath = pointsLeft
+    ? "polygon(52px 0, 100% 0, 100% 100%, 52px 100%, 0 50%)"
+    : "polygon(0 0, calc(100% - 52px) 0, 100% 50%, calc(100% - 52px) 100%, 0 100%)";
+
+  const bgPos = `center ${textureOffsetY}%`;
+
+  // Depth slices: fill the sign's thickness (back → just behind front)
+  const depthSlices = [-8, -5, -2, 1, 4];
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn("relative block group", animationClass)}
+      style={{
+        width:
+          shrinkRightPx || xShiftPx
+            ? `calc(100% - ${shrinkRightPx + xShiftPx}px)`
+            : "100%",
+        marginLeft: xShiftPx,
+        animationDelay: `${delay}ms`,
+        animationFillMode: "both",
+        transformOrigin: "50% 50%",
+        willChange: "transform",
+        transformStyle: "preserve-3d",
+      }}
+    >
+      {/* Thickness: dark wood layers filling back → middle */}
+      {depthSlices.map((z) => (
+        <div
+          key={z}
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            clipPath,
+            transform: `translateZ(${z}px)`,
+            backgroundImage: `url(${woodTexture})`,
+            backgroundSize: "160% auto",
+            backgroundPosition: bgPos,
+            backgroundRepeat: "no-repeat",
+            filter: "brightness(0.15) saturate(0.4)",
+          }}
+        />
+      ))}
+
+      {/* Front face – full wood texture + content */}
+      <div
+        className="relative w-full group-hover:brightness-110 group-active:brightness-95 transition-[filter] duration-150"
+        style={{
+          clipPath,
+          transform: "translateZ(9px)",
+          backgroundImage: `url(${woodTexture})`,
+          backgroundSize: "160% auto",
+          backgroundPosition: bgPos,
+          backgroundRepeat: "no-repeat",
+          boxShadow:
+            "inset 0 -5px 0 rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.12), inset 0 0 50px rgba(0,0,0,0.2)",
+          paddingTop: 18,
+          paddingBottom: 20,
+          paddingLeft: pointsLeft ? 68 : 22,
+          paddingRight: pointsLeft ? 22 : 68,
+          textAlign: pointsLeft ? "right" : "left",
+        }}
+      >
+        <div
+          className="font-black text-2xl text-amber-50 leading-tight"
+          style={{ textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}
+        >
+          {title}
+        </div>
+        <div
+          className={cn(
+            "flex items-center gap-2 mt-1 text-[11px] font-bold uppercase tracking-wider text-amber-200/80",
+            pointsLeft ? "justify-end" : "justify-start",
+          )}
+        >
+          <span>{leftLabel}</span>
+          <span className="opacity-50">⇄</span>
+          <span>{rightLabel}</span>
+        </div>
+      </div>
+    </button>
   );
 }

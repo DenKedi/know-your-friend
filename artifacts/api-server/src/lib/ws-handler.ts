@@ -9,6 +9,7 @@ import {
   selectCategory,
   submitSelfRating,
   submitGuess,
+  forceEndGuessing,
   nextTurn,
   rerollCategories,
   endGameAfterCurrentRound,
@@ -62,16 +63,8 @@ function schedulePhaseTimer(roomCode: string): void {
       setTimeout(() => {
         const r = getRoom(roomCode);
         if (!r || r.status !== "guessing") return;
-        logger.info({ roomCode }, "guessing timer expired – auto-submitting remaining players");
-        const currentPlayer = r.players[r.currentPlayerIndex];
-        for (const player of r.players) {
-          if (player.id === currentPlayer?.id) continue;
-          if (!r.guesses.has(player.id)) {
-            r.timedOutGuessers.add(player.id);
-            submitGuess(r, player.id, GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE);
-            if (r.status !== "guessing") break; // computeRoundResults finished early
-          }
-        }
+        logger.info({ roomCode }, "guessing timer expired – forcing round results");
+        forceEndGuessing(r);
         broadcastState(roomCode);
       }, delayMs),
     );

@@ -268,6 +268,27 @@ export function submitGuess(room: Room, playerId: string, guess: number): boolea
   return true;
 }
 
+/**
+ * Force the guessing phase to end immediately. Any player without a recorded
+ * guess is marked as timed-out (0 points) before results are computed. Used by
+ * the phase timer so a stalled round always advances to the result screen,
+ * even if literally no one submitted a guess.
+ */
+export function forceEndGuessing(room: Room): boolean {
+  if (room.status !== "guessing") return false;
+
+  const currentPlayer = room.players[room.currentPlayerIndex];
+  for (const player of room.players) {
+    if (currentPlayer && player.id === currentPlayer.id) continue;
+    if (!room.guesses.has(player.id)) {
+      room.timedOutGuessers.add(player.id);
+    }
+  }
+
+  computeRoundResults(room);
+  return true;
+}
+
 function computeRoundResults(room: Room): void {
   const selfRating = room.selfRating ?? GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE;
   const results: GuessResult[] = [];
