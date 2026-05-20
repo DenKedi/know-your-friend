@@ -221,6 +221,8 @@ components:
           type: integer
         totalRounds:
           type: integer
+        roundsPerPlayer:
+          type: integer
         currentPlayerId:
           type: ["string", "null"]
         currentCategory:
@@ -251,8 +253,7 @@ components:
         - status
         - players
         - currentRound
-        - totalRounds
-        - currentPlayerId
+        - totalRounds        - roundsPerPlayer        - currentPlayerId
         - currentCategory
         - currentCategoryLabel
         - currentCategoryLeftLabel
