@@ -245,3 +245,31 @@
   100% { transform: rotate(1080deg); }
 }
 .reroll-spinning { animation: reroll-spin 1200ms cubic-bezier(0.2, 0.6, 0.2, 1) both; }
+
+/* Selection sequence: non-chosen signs fall away, chosen flies out in
+   the direction its arrow points. */
+@keyframes sign-fall-left {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg);          opacity: 1; }
+  20%  { transform: translate3d(-4px, 12px, 0) rotate(-4deg);   opacity: 1; }
+  100% { transform: translate3d(-40px, 120vh, 0) rotate(-32deg); opacity: 0.55; }
+}
+@keyframes sign-fall-right {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg);          opacity: 1; }
+  20%  { transform: translate3d(4px, 12px, 0) rotate(4deg);     opacity: 1; }
+  100% { transform: translate3d(40px, 120vh, 0) rotate(32deg);  opacity: 0.55; }
+}
+.sign-fall-left  { animation: sign-fall-left  750ms cubic-bezier(0.45, 0, 0.75, 0) both; }
+.sign-fall-right { animation: sign-fall-right 750ms cubic-bezier(0.45, 0, 0.75, 0) both; }
+
+@keyframes sign-fly-out-left {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg);            opacity: 1; }
+  15%  { transform: translate3d(20px, 0, 0) rotate(3deg);         opacity: 1; }
+  100% { transform: translate3d(-130vw, -8vh, 0) rotate(-18deg);  opacity: 0; }
+}
+@keyframes sign-fly-out-right {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg);            opacity: 1; }
+  15%  { transform: translate3d(-20px, 0, 0) rotate(-3deg);       opacity: 1; }
+  100% { transform: translate3d(130vw, -8vh, 0) rotate(18deg);    opacity: 0; }
+}
+.sign-fly-out-left  { animation: sign-fly-out-left  650ms cubic-bezier(0.5, 0, 0.75, 0.2) both; }
+.sign-fly-out-right { animation: sign-fly-out-right 650ms cubic-bezier(0.5, 0, 0.75, 0.2) both; }

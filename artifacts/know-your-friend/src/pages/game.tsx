@@ -594,6 +594,11 @@ const SPIN_HALF_MS = 600;
 const SPIN_STAGGER_MS = 110;
 const ENTER_DURATION_MS = 650;
 const ENTER_STAGGER_MS = 140;
+const FALL_DURATION_MS = 750;
+const FALL_STAGGER_MS = 80;
+const FLY_OUT_DELAY_MS = 580;
+const FLY_OUT_DURATION_MS = 650;
+const SELECT_TOTAL_MS = FLY_OUT_DELAY_MS + FLY_OUT_DURATION_MS + 30;
 
 function CategorySignpost({
   categories,
@@ -611,7 +616,8 @@ function CategorySignpost({
   rerollUsedLabel: string;
 }) {
   const [displayed, setDisplayed] = useState<Category[]>(categories);
-  const [phase, setPhase] = useState<"enter" | "spin" | "idle">("enter");
+  const [phase, setPhase] = useState<"enter" | "spin" | "idle" | "select">("enter");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const prevIdsRef = useRef<string>(categories.map((c) => c.id).join(","));
 
   // End the initial enter phase after the last sign's enter animation finishes.
@@ -631,6 +637,8 @@ function CategorySignpost({
     const newIds = categories.map((c) => c.id).join(",");
     if (newIds === prevIdsRef.current) return;
     prevIdsRef.current = newIds;
+    // A spin from the server overrides any in-flight selection animation.
+    setSelectedId(null);
     setPhase("spin");
 
     // Swap each slot's content at the midpoint of its own (staggered) spin,
@@ -659,6 +667,33 @@ function CategorySignpost({
     };
   }, [categories]);
 
+  // Fire the actual selection only after the chosen sign has flown off-screen.
+  useEffect(() => {
+    if (phase !== "select" || !selectedId) return;
+    const t = setTimeout(() => onSelect(selectedId), SELECT_TOTAL_MS);
+    return () => clearTimeout(t);
+  }, [phase, selectedId, onSelect]);
+
+  // While the selection animation plays, let signs escape the narrow
+  // `max-w-xl` main column — the page root already has `overflow-hidden`,
+  // so the viewport edge becomes the clipping boundary.
+  useEffect(() => {
+    if (phase !== "select") return;
+    const main = document.querySelector("main");
+    if (!main) return;
+    const prevOverflow = main.style.overflow;
+    main.style.overflow = "visible";
+    return () => {
+      main.style.overflow = prevOverflow;
+    };
+  }, [phase]);
+
+  const handlePick = (id: string) => {
+    if (phase !== "idle" || selectedId) return;
+    setSelectedId(id);
+    setPhase("select");
+  };
+
   return (
     <div className="mt-6 space-y-4" style={{ perspective: "900px" }}>
       {displayed.map((cat, i) => {
@@ -667,18 +702,31 @@ function CategorySignpost({
         const pointsLeft = fromRight; // arrow tip points to where the sign came from
         const enterClass = fromRight ? "sign-enter-from-right" : "sign-enter-from-left";
         const spinClass = fromRight ? "sign-spin-right" : "sign-spin-left";
-        const animClass =
-          phase === "spin"
-            ? spinClass
-            : phase === "enter"
-            ? enterClass
-            : "";
-        const delay =
-          phase === "spin"
-            ? i * SPIN_STAGGER_MS
-            : phase === "enter"
-            ? i * ENTER_STAGGER_MS
-            : 0;
+
+        const isChosen = phase === "select" && cat.id === selectedId;
+        const isFallingAside = phase === "select" && !isChosen;
+        const flyOutClass = pointsLeft ? "sign-fly-out-left" : "sign-fly-out-right";
+        // Non-chosen signs fall away from their own arrow side so they don't
+        // pile under the chosen one.
+        const fallClass = pointsLeft ? "sign-fall-right" : "sign-fall-left";
+
+        let animClass = "";
+        let delay = 0;
+        if (phase === "spin") {
+          animClass = spinClass;
+          delay = i * SPIN_STAGGER_MS;
+        } else if (phase === "enter") {
+          animClass = enterClass;
+          delay = i * ENTER_STAGGER_MS;
+        } else if (isChosen) {
+          animClass = flyOutClass;
+          delay = FLY_OUT_DELAY_MS;
+        } else if (isFallingAside) {
+          animClass = fallClass;
+          // tiny stagger based on slot index (skipping the chosen one)
+          delay = i * FALL_STAGGER_MS;
+        }
+
         return (
           <WoodenSign
             // Stable per-slot key: keeps the DOM node mounted across content
@@ -687,10 +735,11 @@ function CategorySignpost({
             pointsLeft={pointsLeft}
             animationClass={animClass}
             delay={delay}
+            zIndex={isChosen ? 30 : isFallingAside ? 1 : 5}
             textureOffsetY={[25, 58, 88][i] ?? i * 30}
             xShiftPx={i === 1 ? 52 : 0}
             shrinkRightPx={i === 1 ? 0 : 52}
-            onClick={() => phase === "idle" && onSelect(cat.id)}
+            onClick={() => handlePick(cat.id)}
             title={cat.label}
             leftLabel={cat.leftLabel}
             rightLabel={cat.rightLabel}
@@ -705,9 +754,10 @@ function CategorySignpost({
           disabled={!rerollAvailable || phase !== "idle"}
           title={rerollAvailable ? rerollLabel : rerollUsedLabel}
           className={cn(
-            "relative w-14 h-14 rounded-full overflow-hidden disabled:opacity-40 transition-[filter,transform] duration-150",
+            "relative w-14 h-14 rounded-full overflow-hidden disabled:opacity-40 transition-[filter,transform,opacity] duration-200",
             "hover:enabled:brightness-125 hover:enabled:[transform:rotate(30deg)]",
             phase === "spin" && rerollAvailable ? "reroll-spinning" : "",
+            phase === "select" ? "opacity-0 pointer-events-none" : "",
           )}
           style={{
             backgroundColor: WOOD_FALLBACK_BG,
@@ -735,6 +785,7 @@ function WoodenSign({
   pointsLeft,
   animationClass,
   delay,
+  zIndex,
   textureOffsetY,
   xShiftPx,
   shrinkRightPx,
@@ -746,6 +797,7 @@ function WoodenSign({
   pointsLeft: boolean;
   animationClass: string;
   delay: number;
+  zIndex?: number;
   textureOffsetY: number;
   xShiftPx: number;
   shrinkRightPx: number;
@@ -778,6 +830,7 @@ function WoodenSign({
         transformOrigin: "50% 50%",
         willChange: "transform",
         transformStyle: "preserve-3d",
+        zIndex,
       }}
     >
       {/* Thickness: dark wood layers filling back → middle */}
