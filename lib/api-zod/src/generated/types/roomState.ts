@@ -18,6 +18,7 @@ export interface RoomState {
   players: Player[];
   currentRound: number;
   totalRounds: number;
+  roundsPerPlayer: number;
   /** @nullable */
   currentPlayerId: string | null;
   /** @nullable */

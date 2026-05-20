@@ -14,6 +14,7 @@ import {
   endGameAfterCurrentRound,
   leaveRoom,
   getRoomStateForClient,
+  setRoundsPerPlayer,
 } from "./game-engine";
 import { GAMEPLAY_CONFIG } from "./gameplay-config";
 
@@ -248,6 +249,20 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
           const ok = rerollCategories(currentRoom);
           if (!ok) {
             ws.send(JSON.stringify({ type: "error", message: "Du hast in dieser Runde schon neu gewürfelt" }));
+            return;
+          }
+          broadcastState(roomCode);
+          break;
+        }
+        case "set_rounds_per_player": {
+          if (!currentPlayer.isHost) {
+            ws.send(JSON.stringify({ type: "error", message: "Only the host can change rounds" }));
+            return;
+          }
+          const rpp = typeof msg.roundsPerPlayer === "number" ? msg.roundsPerPlayer : -1;
+          const okRpp = setRoundsPerPlayer(currentRoom, rpp);
+          if (!okRpp) {
+            ws.send(JSON.stringify({ type: "error", message: "Cannot change rounds now" }));
             return;
           }
           broadcastState(roomCode);

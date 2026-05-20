@@ -10,6 +10,7 @@ import Results from "@/pages/results";
 import Admin from "@/pages/admin";
 import Dev from "@/pages/dev";
 import { I18nProvider } from "@/lib/i18n";
+import { CampfireScene } from "@/components/scene/campfire-scene";
 
 const queryClient = new QueryClient();
 
@@ -33,7 +34,9 @@ function App() {
       <I18nProvider>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
+            <CampfireScene>
+              <Router />
+            </CampfireScene>
           </WouterRouter>
           <Toaster />
         </TooltipProvider>

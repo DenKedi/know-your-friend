@@ -42,6 +42,7 @@ export interface Room {
   status: GameStatus;
   currentRound: number;
   totalRounds: number;
+  roundsPerPlayer: number;
   currentPlayerIndex: number;
   currentCategory: LocalizedCategory | null;
   currentAvailableCategories: LocalizedCategory[];
@@ -118,6 +119,7 @@ export function createRoom(hostName: string, totalRounds: number, language: Lang
     status: "waiting",
     currentRound: 0,
     totalRounds,
+    roundsPerPlayer: Math.max(1, totalRounds),
     currentPlayerIndex: 0,
     currentCategory: null,
     currentAvailableCategories: [],
@@ -154,7 +156,18 @@ export function joinRoom(
   };
 
   room.players.push(player);
+  if (room.status === "waiting") {
+    room.totalRounds = room.players.length * room.roundsPerPlayer;
+  }
   return { room, player };
+}
+
+export function setRoundsPerPlayer(room: Room, roundsPerPlayer: number): boolean {
+  if (room.status !== "waiting") return false;
+  if (roundsPerPlayer < 1 || roundsPerPlayer > 10) return false;
+  room.roundsPerPlayer = roundsPerPlayer;
+  room.totalRounds = room.players.length * roundsPerPlayer;
+  return true;
 }
 
 export function getRoom(roomCode: string): Room | undefined {
@@ -339,6 +352,7 @@ export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
     })),
     currentRound: room.currentRound,
     totalRounds: room.totalRounds,
+    roundsPerPlayer: room.roundsPerPlayer,
     currentPlayerId: currentPlayer?.id ?? null,
     nextPlayerId: nextRatedPlayer?.id ?? null,
     currentCategory: room.currentCategory?.id ?? null,
@@ -389,6 +403,10 @@ export function leaveRoom(room: Room, playerId: string): { success: boolean; roo
 
   if (room.status !== "waiting" && room.status !== "game_over" && room.players.length < 2) {
     room.status = "game_over";
+  }
+
+  if (room.status === "waiting") {
+    room.totalRounds = room.players.length * room.roundsPerPlayer;
   }
 
   return { success: true, roomDeleted: false };

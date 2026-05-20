@@ -21,7 +21,8 @@ type OutgoingMessage =
   | { type: "next_turn" }
   | { type: "reroll_categories" }
   | { type: "end_game_early" }
-  | { type: "leave_room" };
+  | { type: "leave_room" }
+  | { type: "set_rounds_per_player"; roundsPerPlayer: number };
 
 type IncomingMessage =
   | { type: "state"; state: GameRoomState }

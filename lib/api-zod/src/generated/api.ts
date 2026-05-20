@@ -70,6 +70,7 @@ export const GetRoomResponse = zod.object({
   ),
   currentRound: zod.number(),
   totalRounds: zod.number(),
+  roundsPerPlayer: zod.number(),
   currentPlayerId: zod.string().nullable(),
   currentCategory: zod.string().nullable(),
   currentCategoryLabel: zod.string().nullable(),
