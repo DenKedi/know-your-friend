@@ -3,6 +3,7 @@ import type { RoomState } from "@workspace/api-client-react";
 import { wsUrl } from "../lib/api-base";
 import { useToast } from "./use-toast";
 import { useI18n } from "@/lib/i18n";
+import { useDevGame, DEV_ROOM_CODE } from "@/lib/dev-game-context";
 
 export type GameRoomState = RoomState & {
   nextPlayerId?: string | null;
@@ -16,8 +17,8 @@ export type GameRoomState = RoomState & {
 type OutgoingMessage =
   | { type: "start_game" }
   | { type: "select_category"; categoryId: string }
-  | { type: "submit_self_rating"; rating: number }
-  | { type: "submit_guess"; guess: number }
+  | { type: "submit_self_rating"; rating: number; path: number[] }
+  | { type: "submit_guess"; guess: number; path: number[] }
   | { type: "next_turn" }
   | { type: "reroll_categories" }
   | { type: "end_game_early" }
@@ -29,6 +30,8 @@ type IncomingMessage =
   | { type: "error"; message: string };
 
 export function useGameSocket(roomCode: string | undefined) {
+  const devCtx = useDevGame();
+
   const [state, setState] = useState<GameRoomState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -39,6 +42,8 @@ export function useGameSocket(roomCode: string | undefined) {
   const { t } = useI18n();
 
   const connect = useCallback(() => {
+    // Skip real WebSocket when dev mode is active for this room
+    if (devCtx.isDevMode && roomCode === DEV_ROOM_CODE) return;
     if (!roomCode || unmountedRef.current) return;
 
     const token = sessionStorage.getItem(`kyf_token_${roomCode}`);
@@ -124,6 +129,16 @@ export function useGameSocket(roomCode: string | undefined) {
       });
     }
   }, [toast]);
+
+  // ── Dev mode short-circuit ─────────────────────────────────────────────
+  if (devCtx.isDevMode && roomCode === DEV_ROOM_CODE) {
+    return {
+      state: devCtx.devState,
+      error: null as string | null,
+      isConnected: true,
+      send: devCtx.send as (message: OutgoingMessage) => void,
+    };
+  }
 
   return { state, error, isConnected, send };
 }

@@ -11,6 +11,8 @@ import Admin from "@/pages/admin";
 import Dev from "@/pages/dev";
 import { I18nProvider } from "@/lib/i18n";
 import { CampfireScene } from "@/components/scene/campfire-scene";
+import { DevGameProvider } from "@/lib/dev-game-context";
+import { DevToolbar } from "@/components/dev/dev-toolbar";
 
 const queryClient = new QueryClient();
 
@@ -30,18 +32,21 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <I18nProvider>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <CampfireScene>
-              <Router />
-            </CampfireScene>
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
-      </I18nProvider>
-    </QueryClientProvider>
+    <DevGameProvider>
+      <QueryClientProvider client={queryClient}>
+        <I18nProvider>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <CampfireScene>
+                <Router />
+              </CampfireScene>
+              {import.meta.env.DEV && <DevToolbar />}
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </I18nProvider>
+      </QueryClientProvider>
+    </DevGameProvider>
   );
 }
 

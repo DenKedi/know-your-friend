@@ -4,6 +4,7 @@
  */
 
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GameSlider } from "@/components/game-slider";
@@ -16,6 +17,9 @@ import {
 } from "@/components/ui/dialog";
 import { useI18n } from "@/lib/i18n";
 import type { GameRoomState } from "@/hooks/use-game-socket";
+import { useDevGame } from "@/lib/dev-game-context";
+import { DEFAULT_DEV_CONFIG, type DevGameConfig } from "@/lib/dev-game-state";
+import { DEV_ROOM_CODE } from "@/lib/dev-game-state";
 
 // ─── colour palette shared with game.tsx ────────────────────────────────────
 const MARKER_COLORS = [
@@ -763,8 +767,189 @@ function DevToolbar({
   );
 }
 
+// ─── Simulator tab ───────────────────────────────────────────────────────────
+
+const DEFAULT_NAMES = ["Alice", "Bob", "Carol", "Dave", "Eve", "Frank", "Grace", "Hank"];
+
+function SimulatorTab() {
+  const { startDevMode, isDevMode, stopDevMode } = useDevGame();
+  const [, navigate] = useLocation();
+  const [playerCount, setPlayerCount] = useState(DEFAULT_DEV_CONFIG.playerNames.length);
+  const [playerNames, setPlayerNames] = useState<string[]>(DEFAULT_DEV_CONFIG.playerNames);
+  const [roundsPerPlayer, setRoundsPerPlayer] = useState(DEFAULT_DEV_CONFIG.roundsPerPlayer);
+  const [language, setLanguage] = useState<DevGameConfig["language"]>(DEFAULT_DEV_CONFIG.language);
+
+  const handlePlayerCountChange = (count: number) => {
+    const clamped = Math.max(2, Math.min(8, count));
+    setPlayerCount(clamped);
+    setPlayerNames((prev) => {
+      const next = [...prev];
+      while (next.length < clamped) next.push(DEFAULT_NAMES[next.length] ?? `Player ${next.length + 1}`);
+      return next.slice(0, clamped);
+    });
+  };
+
+  const handleLaunch = () => {
+    const config: DevGameConfig = {
+      playerNames: playerNames.slice(0, playerCount),
+      roundsPerPlayer,
+      language,
+    };
+    startDevMode(config);
+    navigate(`/room/${DEV_ROOM_CODE}/lobby`);
+  };
+
+  const handleStop = () => {
+    stopDevMode();
+  };
+
+  if (isDevMode) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-6">
+        <div className="text-sm font-bold text-primary uppercase tracking-wider">
+          Simulator is running
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Room: <code className="bg-input px-1 py-0.5 rounded">{DEV_ROOM_CODE}</code> — use the
+          toolbar at the bottom to control phases.
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => navigate(`/room/${DEV_ROOM_CODE}/lobby`)}
+            variant="outline"
+            size="sm"
+          >
+            Back to Lobby
+          </Button>
+          <Button onClick={handleStop} variant="destructive" size="sm">
+            Stop Simulator
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+      {/* Player count */}
+      <div className="space-y-2">
+        <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Players
+        </label>
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-8 h-8 p-0"
+            onClick={() => handlePlayerCountChange(playerCount - 1)}
+            disabled={playerCount <= 2}
+          >
+            −
+          </Button>
+          <span className="w-6 text-center font-black text-lg">{playerCount}</span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-8 h-8 p-0"
+            onClick={() => handlePlayerCountChange(playerCount + 1)}
+            disabled={playerCount >= 8}
+          >
+            +
+          </Button>
+          <span className="text-xs text-muted-foreground">(2 – 8)</span>
+        </div>
+      </div>
+
+      {/* Player names */}
+      <div className="space-y-2">
+        <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Player names
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {playerNames.slice(0, playerCount).map((name, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-muted-foreground w-4 shrink-0">
+                P{i + 1}
+              </span>
+              <input
+                type="text"
+                value={name}
+                maxLength={20}
+                onChange={(e) =>
+                  setPlayerNames((prev) => {
+                    const next = [...prev];
+                    next[i] = e.target.value;
+                    return next;
+                  })
+                }
+                className="flex-1 rounded border border-border bg-input px-2 py-1 text-sm text-foreground focus:outline-none focus:border-primary"
+              />
+              {i === 0 && (
+                <span className="text-[9px] text-muted-foreground shrink-0">host</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Rounds */}
+      <div className="space-y-2">
+        <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Rounds per player
+        </label>
+        <select
+          value={roundsPerPlayer}
+          onChange={(e) => setRoundsPerPlayer(Number(e.target.value))}
+          className="rounded border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:outline-none focus:border-primary"
+        >
+          {[1, 2, 3, 4, 5].map((n) => (
+            <option key={n} value={n}>
+              {n}× — {n * playerCount} total rounds
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Language */}
+      <div className="space-y-2">
+        <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Language
+        </label>
+        <div className="flex gap-2">
+          {(["en", "de"] as const).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => setLanguage(lang)}
+              className={`px-3 py-1.5 rounded border text-sm font-bold transition-all ${
+                language === lang
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-input text-foreground hover:border-primary/50"
+              }`}
+            >
+              {lang === "en" ? "🇬🇧 English" : "🇩🇪 Deutsch"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="text-xs text-muted-foreground bg-input rounded-xl px-4 py-3">
+        <strong className="text-foreground">{playerCount} players</strong> ·{" "}
+        <strong className="text-foreground">{roundsPerPlayer * playerCount}</strong> total rounds ·
+        each player rates themselves <strong className="text-foreground">{roundsPerPlayer}×</strong>
+      </div>
+
+      {/* Launch */}
+      <Button onClick={handleLaunch} className="w-full py-6 text-lg font-black rounded-xl">
+        🚀 Launch Dev Game
+      </Button>
+    </div>
+  );
+}
+
 // ─── Main Dev page ────────────────────────────────────────────────────────────
 export default function Dev() {
+  const [tab, setTab] = useState<"simulator" | "preview">("simulator");
   const [selectedScreen, setSelectedScreen] = useState<ScreenId>("category_selection_current");
   const [cfg, setCfg] = useState<MockConfig>(defaultConfig());
   const [previewKey, setPreviewKey] = useState(0);
@@ -794,54 +979,81 @@ export default function Dev() {
         {/* Top bar */}
         <div className="flex items-center gap-3 px-4 py-2 border-b border-border">
           <span className="font-black text-primary uppercase tracking-widest text-xs bg-primary/10 px-2 py-0.5 rounded-full">
-            DEV PREVIEW
+            DEV
           </span>
-          <span className="text-xs text-muted-foreground hidden sm:block">
-            Preview game screens with mock data — buttons are non-functional
-          </span>
+          {/* Tab switcher */}
+          <div className="flex gap-1">
+            {(["simulator", "preview"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all border ${
+                  tab === t
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-input text-foreground border-border hover:border-primary/50"
+                }`}
+              >
+                {t === "simulator" ? "🎮 Simulator" : "🖼 Preview"}
+              </button>
+            ))}
+          </div>
+          {tab === "preview" && (
+            <span className="text-xs text-muted-foreground hidden sm:block">
+              Preview game screens with mock data — buttons are non-functional
+            </span>
+          )}
           <a href="/" className="ml-auto text-xs text-muted-foreground underline hover:text-foreground">
             ← Back to app
           </a>
         </div>
 
-        {/* Screen selector */}
-        <div className="flex flex-wrap gap-1 px-4 py-2.5 border-b border-border">
-          {Object.entries(groups).map(([group, screens]) => (
-            <div key={group} className="flex items-center gap-1">
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60 mr-0.5 hidden sm:block">
-                {group}:
-              </span>
-              {screens.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => { setSelectedScreen(s.id); setPreviewKey((k) => k + 1); }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
-                    selectedScreen === s.id
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-input text-foreground border-border hover:border-primary/50"
-                  }`}
-                >
-                  {s.label}
-                </button>
+        {/* Preview-only controls */}
+        {tab === "preview" && (
+          <>
+            {/* Screen selector */}
+            <div className="flex flex-wrap gap-1 px-4 py-2.5 border-b border-border">
+              {Object.entries(groups).map(([group, screens]) => (
+                <div key={group} className="flex items-center gap-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/60 mr-0.5 hidden sm:block">
+                    {group}:
+                  </span>
+                  {screens.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => { setSelectedScreen(s.id); setPreviewKey((k) => k + 1); }}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
+                        selectedScreen === s.id
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-input text-foreground border-border hover:border-primary/50"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                  <span className="text-border mx-1 hidden sm:block">|</span>
+                </div>
               ))}
-              <span className="text-border mx-1 hidden sm:block">|</span>
             </div>
-          ))}
+
+            {/* Config toolbar */}
+            <DevToolbar
+              cfg={cfg}
+              onCfgChange={handleCfgChange}
+              onRandomize={handleRandomize}
+              onReset={handleReset}
+            />
+          </>
+        )}
+      </div>
+
+      {/* ── Content area ────────────────────────────────────────────────────── */}
+      {tab === "simulator" ? (
+        <SimulatorTab />
+      ) : (
+        <div className="flex-1">
+          <GameScreenPreview key={previewKey} screen={selectedScreen} cfg={cfg} />
         </div>
-
-        {/* Config toolbar */}
-        <DevToolbar
-          cfg={cfg}
-          onCfgChange={handleCfgChange}
-          onRandomize={handleRandomize}
-          onReset={handleReset}
-        />
-      </div>
-
-      {/* ── Preview area ────────────────────────────────────────────────────── */}
-      <div className="flex-1">
-        <GameScreenPreview key={previewKey} screen={selectedScreen} cfg={cfg} />
-      </div>
+      )}
     </div>
   );
 }

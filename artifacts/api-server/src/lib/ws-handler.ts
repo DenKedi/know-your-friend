@@ -21,6 +21,23 @@ import { GAMEPLAY_CONFIG } from "./gameplay-config";
 
 const roomClients = new Map<string, Map<string, WebSocket>>();
 
+/**
+ * Coerce a wire payload into a safe slider path: integers in [0, 100],
+ * capped at 16 entries to bound memory regardless of client behavior.
+ */
+function sanitizeSliderPath(raw: unknown): number[] {
+  if (!Array.isArray(raw)) return [];
+  const out: number[] = [];
+  for (const v of raw) {
+    if (typeof v !== "number" || !Number.isFinite(v)) continue;
+    const n = Math.round(v);
+    if (n < 0 || n > 100) continue;
+    out.push(n);
+    if (out.length >= 16) break;
+  }
+  return out;
+}
+
 // ── Phase timers ───────────────────────────────────────────────────────────
 const roomTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -196,7 +213,8 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
             return;
           }
           const rating = typeof msg.rating === "number" ? msg.rating : -1;
-          const ok = submitSelfRating(currentRoom, rating);
+          const path = sanitizeSliderPath(msg.path);
+          const ok = submitSelfRating(currentRoom, rating, path);
           if (!ok) {
             ws.send(JSON.stringify({ type: "error", message: "Invalid rating" }));
             return;
@@ -211,7 +229,8 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
             return;
           }
           const guess = typeof msg.guess === "number" ? msg.guess : -1;
-          const ok = submitGuess(currentRoom, currentPlayer.id, guess);
+          const path = sanitizeSliderPath(msg.path);
+          const ok = submitGuess(currentRoom, currentPlayer.id, guess, path);
           if (!ok) {
             ws.send(JSON.stringify({ type: "error", message: "Invalid guess or already submitted" }));
             return;

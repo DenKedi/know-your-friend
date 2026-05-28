@@ -253,7 +253,9 @@ components:
         - status
         - players
         - currentRound
-        - totalRounds        - roundsPerPlayer        - currentPlayerId
+        - totalRounds
+        - roundsPerPlayer
+        - currentPlayerId
         - currentCategory
         - currentCategoryLabel
         - currentCategoryLeftLabel
@@ -279,6 +281,16 @@ components:
           type: integer
         points:
           type: integer
+        path:
+          type: array
+          description: Recorded slider extrema (direction-reversal points) from the guesser's drag, in chronological order. Always starts with the initial value and ends with the submitted guess. Empty if the guesser did not drag.
+          items:
+            type: integer
+        selfRatingPath:
+          type: array
+          description: Same as `path`, but for the current player's self-rating drag.
+          items:
+            type: integer
       required:
         - playerId
         - playerName

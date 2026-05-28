@@ -67,6 +67,10 @@ export interface GuessResult {
   selfRating: number;
   diff: number;
   points: number;
+  /** Recorded slider extrema (direction-reversal points) from the guesser's drag, in chronological order. Always starts with the initial value and ends with the submitted guess. Empty if the guesser did not drag. */
+  path?: number[];
+  /** Same as `path`, but for the current player's self-rating drag. */
+  selfRatingPath?: number[];
 }
 
 export interface Category {

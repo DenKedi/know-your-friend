@@ -88,6 +88,18 @@ export const GetRoomResponse = zod.object({
         selfRating: zod.number(),
         diff: zod.number(),
         points: zod.number(),
+        path: zod
+          .array(zod.number())
+          .optional()
+          .describe(
+            "Recorded slider extrema (direction-reversal points) from the guesser's drag, in chronological order. Always starts with the initial value and ends with the submitted guess. Empty if the guesser did not drag.",
+          ),
+        selfRatingPath: zod
+          .array(zod.number())
+          .optional()
+          .describe(
+            "Same as `path`, but for the current player's self-rating drag.",
+          ),
       }),
     )
     .nullable(),

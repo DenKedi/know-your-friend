@@ -24,6 +24,10 @@ export interface GuessResult {
   selfRating: number;
   diff: number;
   points: number;
+  /** Recorded slider extrema from the guesser's drag; first entry = start value, last = submitted guess. */
+  path?: number[];
+  /** Recorded slider extrema from the current player's self-rating drag (same on every entry of a round). */
+  selfRatingPath?: number[];
 }
 
 export type GameStatus =
@@ -47,7 +51,9 @@ export interface Room {
   currentCategory: LocalizedCategory | null;
   currentAvailableCategories: LocalizedCategory[];
   selfRating: number | null;
+  selfRatingPath: number[] | null;
   guesses: Map<string, number>;
+  guessesPaths: Map<string, number[]>;
   roundResults: GuessResult[] | null;
   usedCategoryIds: Set<string>;
   rerollUsedThisTurn: boolean;
@@ -124,7 +130,9 @@ export function createRoom(hostName: string, totalRounds: number, language: Lang
     currentCategory: null,
     currentAvailableCategories: [],
     selfRating: null,
+    selfRatingPath: null,
     guesses: new Map(),
+    guessesPaths: new Map(),
     roundResults: null,
     usedCategoryIds: new Set(),
     rerollUsedThisTurn: false,
@@ -236,23 +244,26 @@ export function selectCategory(room: Room, categoryId: string): boolean {
   room.usedCategoryIds.add(categoryId);
   room.status = "self_rating";
   room.selfRating = null;
+  room.selfRatingPath = null;
   room.guesses = new Map();
+  room.guessesPaths = new Map();
   room.timedOutGuessers = new Set();
   room.phaseDeadline = Date.now() + GAMEPLAY_CONFIG.SELF_RATING_TIMEOUT_MS;
   return true;
 }
 
-export function submitSelfRating(room: Room, rating: number): boolean {
+export function submitSelfRating(room: Room, rating: number, path: number[] = []): boolean {
   if (room.status !== "self_rating") return false;
   if (rating < 0 || rating > 100) return false;
 
   room.selfRating = rating;
+  room.selfRatingPath = path;
   room.status = "guessing";
   room.phaseDeadline = Date.now() + GAMEPLAY_CONFIG.GUESSING_TIMEOUT_MS;
   return true;
 }
 
-export function submitGuess(room: Room, playerId: string, guess: number): boolean {
+export function submitGuess(room: Room, playerId: string, guess: number, path: number[] = []): boolean {
   if (room.status !== "guessing") return false;
   if (guess < 0 || guess > 100) return false;
 
@@ -260,6 +271,7 @@ export function submitGuess(room: Room, playerId: string, guess: number): boolea
   if (!currentPlayer || playerId === currentPlayer.id) return false;
 
   room.guesses.set(playerId, guess);
+  room.guessesPaths.set(playerId, path);
 
   const guessersCount = room.players.length - 1;
   if (room.guesses.size >= guessersCount) {
@@ -291,6 +303,7 @@ export function forceEndGuessing(room: Room): boolean {
 
 function computeRoundResults(room: Room): void {
   const selfRating = room.selfRating ?? GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE;
+  const selfRatingPath = room.selfRatingPath ?? undefined;
   const results: GuessResult[] = [];
 
   for (const player of room.players) {
@@ -298,6 +311,7 @@ function computeRoundResults(room: Room): void {
     if (!currentPlayer || player.id === currentPlayer.id) continue;
 
     const guess = room.guesses.get(player.id) ?? GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE;
+    const path = room.guessesPaths.get(player.id);
     const timedOut = room.timedOutGuessers.has(player.id);
     const diff = Math.abs(guess - selfRating);
     const points = timedOut ? 0 : Math.max(0, GAMEPLAY_CONFIG.MAX_POINTS_PER_ROUND - diff * GAMEPLAY_CONFIG.POINTS_PER_DIFF_UNIT);
@@ -310,6 +324,8 @@ function computeRoundResults(room: Room): void {
       selfRating,
       diff,
       points,
+      path,
+      selfRatingPath,
     });
   }
 
@@ -337,7 +353,9 @@ export function nextTurn(room: Room): boolean {
   room.status = "category_selection";
   room.currentCategory = null;
   room.selfRating = null;
+  room.selfRatingPath = null;
   room.guesses = new Map();
+  room.guessesPaths = new Map();
   room.roundResults = null;
   room.rerollUsedThisTurn = false;
   room.phaseDeadline = null;
