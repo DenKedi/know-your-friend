@@ -88,13 +88,16 @@ function generateToken(): string {
   return randomBytes(16).toString("hex");
 }
 
-function pickCategoriesForTurn(room: Room): void {
+function pickCategoriesForTurn(room: Room, extraExcludeIds?: Set<string>): void {
   const all = getLocalizedCategories(room.language);
-  let remaining = all.filter((c) => !room.usedCategoryIds.has(c.id));
-  // If we've exhausted them all (e.g., long game), reset the used pool so the game can continue.
+  let remaining = all.filter((c) => !room.usedCategoryIds.has(c.id) && !extraExcludeIds?.has(c.id));
+  // If we've exhausted them all (e.g., long game), reset the used pool so the game can continue
+  // (but still honour the reroll exclusion list so we never show the same options twice).
   if (remaining.length === 0) {
     room.usedCategoryIds = new Set();
-    remaining = all;
+    remaining = all.filter((c) => !extraExcludeIds?.has(c.id));
+    // If even that is empty (e.g. CATEGORIES_PER_TURN >= total categories), fall back to all.
+    if (remaining.length === 0) remaining = all;
   }
   const shuffled = [...remaining].sort(() => Math.random() - 0.5);
   room.currentAvailableCategories = shuffled.slice(0, Math.min(GAMEPLAY_CONFIG.CATEGORIES_PER_TURN, shuffled.length));
@@ -217,7 +220,8 @@ export function rerollCategories(room: Room): boolean {
   if (room.status !== "category_selection") return false;
   if (room.rerollUsedThisTurn) return false;
   room.rerollUsedThisTurn = true;
-  pickCategoriesForTurn(room);
+  const excludeIds = new Set(room.currentAvailableCategories.map((c) => c.id));
+  pickCategoriesForTurn(room, excludeIds);
   return true;
 }
 

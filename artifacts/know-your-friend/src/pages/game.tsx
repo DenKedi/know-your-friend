@@ -128,7 +128,7 @@ function ScoreReveal({
 
   return (
     <div className="text-right flex-shrink-0 ml-2 flex flex-col items-end leading-none gap-1">
-      <div className={cn("font-black text-2xl tabular-nums", isBest ? "text-yellow-300" : "text-primary")}>
+      <div className={cn("font-black text-lg tabular-nums", isBest ? "text-yellow-300" : "text-primary")}>
         {displayed}
       </div>
       <div
@@ -278,7 +278,7 @@ export default function Game() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center px-4 py-6 max-w-xl mx-auto w-full overflow-y-auto [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">
+      <main className="flex-1 flex flex-col items-center px-4 py-3 max-w-xl mx-auto w-full overflow-y-auto [text-shadow:0_2px_8px_rgba(0,0,0,0.6)]">
 
         {/* ── KATEGORIE WÄHLEN ─────────────────────────────────── */}
         {state.status === "category_selection" && (
@@ -433,12 +433,12 @@ export default function Game() {
 
         {/* ── RUNDEN-ERGEBNIS ─────────────────────────────────── */}
         {state.status === "round_results" && state.roundResults && (
-          <section className="w-full space-y-6 animate-in fade-in duration-500">
+          <section className="w-full space-y-3 animate-in fade-in duration-500">
             <div className="text-center">
-              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">
+              <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
                 {t("game.reveal")}
               </h2>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground">
                 {t("game.revealSubtitle", {
                   name: currentPlayer?.name ?? "-",
                   category: state.currentCategoryLabel ?? "-",
@@ -499,11 +499,19 @@ export default function Game() {
               )}
             >
               {(() => {
+                // Build a full entry for every player; those absent from roundResults
+                // (i.e. the current player who self-rated) get 0 points earned.
+                type RowEntry = { playerId: string; playerName: string; points: number };
+                const allRows: RowEntry[] = state.players.map((p) => {
+                  const result = state.roundResults!.find((r) => r.playerId === p.id);
+                  return { playerId: p.id, playerName: p.name, points: result?.points ?? 0 };
+                });
+
                 // Pre-sort: worst→best for sequential reveal animation.
-                const animOrder = [...state.roundResults].sort((a, b) => a.points - b.points);
+                const animOrder = [...allRows].sort((a, b) => a.points - b.points);
                 // Post-sort: leader on top.
                 const displayOrder = leaderboardSorted
-                  ? [...state.roundResults].sort((a, b) => {
+                  ? [...allRows].sort((a, b) => {
                       const sA = state.players.find((p) => p.id === a.playerId)?.score ?? 0;
                       const sB = state.players.find((p) => p.id === b.playerId)?.score ?? 0;
                       return sB - sA;
@@ -512,9 +520,7 @@ export default function Game() {
 
                 return displayOrder.map((r, k) => {
                   const originalIdx = state.players.findIndex((p) => p.id === r.playerId);
-                  const color = colorForIndex(
-                    originalIdx >= 0 ? originalIdx : state.roundResults!.findIndex((x) => x.playerId === r.playerId),
-                  );
+                  const color = colorForIndex(originalIdx >= 0 ? originalIdx : k);
                   const animRank = animOrder.findIndex((x) => x.playerId === r.playerId);
                   const isBestThisRound = !leaderboardSorted && k === animOrder.length - 1;
                   const isOverallLeader = leaderboardSorted && k === 0;
@@ -526,7 +532,7 @@ export default function Game() {
                     <div
                       key={r.playerId}
                       className={cn(
-                        "px-2 py-3 flex items-center justify-between",
+                        "px-2 py-1.5 flex items-center justify-between",
                         !leaderboardSorted && "animate-in slide-in-from-bottom-4",
                         highlight && "bg-yellow-300/10 rounded-lg ring-1 ring-yellow-300/40",
                       )}
@@ -544,7 +550,7 @@ export default function Game() {
                         )}
                         <div
                           className={cn(
-                            "w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black",
+                            "w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black",
                             highlight && "ring-2 ring-yellow-300",
                           )}
                           style={{ background: color.bg, color: color.text }}
@@ -570,18 +576,21 @@ export default function Game() {
             </div>
 
             {/* Next-up hint */}
-            {!isLastTurn && nextPlayer && (
+            {!isLastTurn && nextPlayer && nextPlayer.id !== playerId && (
               <div className="text-center text-sm text-muted-foreground">
                 {t("game.nextUp", { name: nextPlayer.name })}
               </div>
             )}
 
-            {/* Next button – anyone can advance */}
+            {/* Next button – only the next player can advance */}
             <Button
-              className="w-full py-6 text-lg font-black rounded-full mt-2"
+              className="w-full py-3 text-base font-black rounded-full"
+              disabled={nextPlayer?.id !== playerId}
               onClick={handleNextTurn}
             >
-              {isLastTurn ? t("game.endGame") : t("game.continue")}
+              {nextPlayer?.id !== playerId
+                ? t("game.waiting")
+                : isLastTurn ? t("game.endGame") : t("game.continue")}
             </Button>
           </section>
         )}
