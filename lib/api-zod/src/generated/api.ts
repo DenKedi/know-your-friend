@@ -87,6 +87,14 @@ export const GetRoomResponse = zod.object({
         guess: zod.number(),
         selfRating: zod.number(),
         diff: zod.number(),
+        basePoints: zod
+          .number()
+          .describe(
+            "Score earned from the standard distance-based formula before any close-guess reward.",
+          ),
+        bonusPoints: zod
+          .number()
+          .describe("Extra score earned for an exact or near-exact guess."),
         points: zod.number(),
         path: zod
           .array(zod.number())
