@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
-import { useCreateRoom, useGetRoom, useJoinRoom } from "@workspace/api-client-react";
+import { getGetRoomQueryKey, useCreateRoom, useGetRoom, useJoinRoom } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +52,7 @@ export default function Home() {
   const joinRoom = useJoinRoom();
   const { data: joiningRoom } = useGetRoom(normalizedRoomCode, {
     query: {
+      queryKey: getGetRoomQueryKey(normalizedRoomCode),
       enabled: pendingAction === "join" && normalizedRoomCode.length === 4,
       refetchInterval: 1500,
       retry: false,
