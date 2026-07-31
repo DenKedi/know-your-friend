@@ -20,6 +20,16 @@ export const HealthCheckResponse = zod.object({
  */
 export const CreateRoomBody = zod.object({
   hostName: zod.string(),
+  animal: zod.enum([
+    "fox",
+    "raccoon",
+    "hedgehog",
+    "deer",
+    "bear",
+    "wolf",
+    "owl",
+    "squirrel",
+  ]),
   totalRounds: zod.number(),
   language: zod.enum(["en", "de", "fr", "es", "it", "ru"]),
 });
@@ -33,6 +43,16 @@ export const JoinRoomParams = zod.object({
 
 export const JoinRoomBody = zod.object({
   playerName: zod.string(),
+  animal: zod.enum([
+    "fox",
+    "raccoon",
+    "hedgehog",
+    "deer",
+    "bear",
+    "wolf",
+    "owl",
+    "squirrel",
+  ]),
 });
 
 export const JoinRoomResponse = zod.object({
@@ -64,6 +84,18 @@ export const GetRoomResponse = zod.object({
     zod.object({
       id: zod.string(),
       name: zod.string(),
+      animal: zod
+        .enum([
+          "fox",
+          "raccoon",
+          "hedgehog",
+          "deer",
+          "bear",
+          "wolf",
+          "owl",
+          "squirrel",
+        ])
+        .optional(),
       score: zod.number(),
       isHost: zod.boolean(),
     }),
@@ -87,14 +119,6 @@ export const GetRoomResponse = zod.object({
         guess: zod.number(),
         selfRating: zod.number(),
         diff: zod.number(),
-        basePoints: zod
-          .number()
-          .describe(
-            "Score earned from the standard distance-based formula before any close-guess reward.",
-          ),
-        bonusPoints: zod
-          .number()
-          .describe("Extra score earned for an exact or near-exact guess."),
         points: zod.number(),
         path: zod
           .array(zod.number())

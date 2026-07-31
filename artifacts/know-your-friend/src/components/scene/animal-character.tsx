@@ -1,7 +1,8 @@
-import type { SlotConfig } from "@/lib/scene-config";
+import { getAnimalEmoji, type SlotConfig } from "@/lib/scene-config";
 
 type Props = {
   slot: SlotConfig;
+  animal?: string;
   /** When true, plays the pop-in enter animation. */
   isEntering: boolean;
 };
@@ -10,8 +11,9 @@ type Props = {
  * Phase-1 placeholder renderer: emoji + CSS loop.
  * When real assets land, branch on `slot.renderer` (image | lottie | video).
  */
-export function AnimalCharacter({ slot, isEntering }: Props) {
+export function AnimalCharacter({ slot, animal, isEntering }: Props) {
   const flip = slot.facing === "left" ? "scaleX(-1)" : "scaleX(1)";
+  const emoji = getAnimalEmoji(animal) ?? slot.placeholder;
   return (
     <div
       className="pointer-events-none absolute z-10"
@@ -30,7 +32,7 @@ export function AnimalCharacter({ slot, isEntering }: Props) {
             style={{ transform: flip }}
             aria-hidden
           >
-            {slot.placeholder}
+            {emoji}
           </div>
         </div>
       </div>

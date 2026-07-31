@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
-import { useLocation } from "wouter";
-import { useCreateRoom, useJoinRoom } from "@workspace/api-client-react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useSearch } from "wouter";
+import { useCreateRoom, useGetRoom, useJoinRoom } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,16 +15,29 @@ import { useToast } from "@/hooks/use-toast";
 import { LANGUAGE_OPTIONS, useI18n } from "@/lib/i18n";
 import { Flag } from "@/components/flag";
 import fireIcon from "@/assets/icons/Fire_1.png";
+import { SoundToggle } from "@/components/sound-toggle";
+import { ANIMAL_OPTIONS, type AnimalId } from "@/lib/scene-config";
 
 export default function Home() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   const { language, setLanguage, t } = useI18n();
   const [name, setName] = useState("");
+  const [animal, setAnimal] = useState<AnimalId>("fox");
   const [roomCode, setRoomCode] = useState("");
+  const [pendingAction, setPendingAction] = useState<"create" | "join" | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
+  const roomCodeInputRef = useRef<HTMLInputElement>(null);
+  const inviteRoomCode = new URLSearchParams(search).get("room")?.trim().toUpperCase() ?? "";
+  const normalizedRoomCode = roomCode.trim().toUpperCase();
+
+  useEffect(() => {
+    if (inviteRoomCode.length !== 4) return;
+    setRoomCode(inviteRoomCode);
+    setPendingAction("join");
+  }, [inviteRoomCode]);
 
   const focusForm = () => {
     const el = formRef.current;
@@ -32,19 +45,38 @@ export default function Home() {
       const top = el.getBoundingClientRect().top + window.scrollY - 72;
       window.scrollTo({ top, behavior: "smooth" });
     }
-    window.setTimeout(() => nameInputRef.current?.focus(), 400);
+    window.setTimeout(() => roomCodeInputRef.current?.focus(), 400);
   };
 
   const createRoom = useCreateRoom();
   const joinRoom = useJoinRoom();
+  const { data: joiningRoom } = useGetRoom(normalizedRoomCode, {
+    query: {
+      enabled: pendingAction === "join" && normalizedRoomCode.length === 4,
+      refetchInterval: 1500,
+      retry: false,
+    },
+  });
+
+  const claimedAnimals = new Map<AnimalId, string>();
+  for (const player of joiningRoom?.players ?? []) {
+    if (ANIMAL_OPTIONS.some((option) => option.id === player.animal)) {
+      claimedAnimals.set(player.animal as AnimalId, player.name);
+    }
+  }
+  const selectedAnimalClaimed = claimedAnimals.has(animal);
+  const noAnimalsAvailable = pendingAction === "join" && claimedAnimals.size === ANIMAL_OPTIONS.length;
+
+  useEffect(() => {
+    if (pendingAction === "join" && claimedAnimals.has(animal)) {
+      const availableAnimal = ANIMAL_OPTIONS.find((option) => !claimedAnimals.has(option.id));
+      if (availableAnimal) setAnimal(availableAnimal.id);
+    }
+  }, [animal, claimedAnimals, pendingAction]);
 
   const handleCreate = () => {
-    if (!name.trim()) {
-      toast({ title: t("home.nameRequired"), variant: "destructive" });
-      return;
-    }
     createRoom.mutate(
-      { data: { hostName: name, totalRounds: 5, language } },
+      { data: { hostName: name.trim(), animal, totalRounds: 5, language } },
       {
         onSuccess: (data) => {
           sessionStorage.setItem(`kyf_token_${data.roomCode}`, data.playerToken);
@@ -63,16 +95,8 @@ export default function Home() {
   };
 
   const handleJoin = () => {
-    if (!name.trim()) {
-      toast({ title: t("home.nameRequired"), variant: "destructive" });
-      return;
-    }
-    if (!roomCode.trim() || roomCode.length !== 4) {
-      toast({ title: t("home.invalidCode"), variant: "destructive" });
-      return;
-    }
     joinRoom.mutate(
-      { roomCode: roomCode.toUpperCase(), data: { playerName: name } },
+      { roomCode: roomCode.toUpperCase(), data: { playerName: name.trim(), animal } },
       {
         onSuccess: (data) => {
           sessionStorage.setItem(`kyf_token_${data.roomCode}`, data.playerToken);
@@ -88,6 +112,33 @@ export default function Home() {
         },
       }
     );
+  };
+
+  const requestCreate = () => setPendingAction("create");
+
+  const requestJoin = () => {
+    if (!roomCode.trim() || roomCode.trim().length !== 4) {
+      toast({ title: t("home.invalidCode"), variant: "destructive" });
+      return;
+    }
+    setPendingAction("join");
+  };
+
+  const submitName = () => {
+    if (!name.trim()) {
+      toast({ title: t("home.nameRequired"), variant: "destructive" });
+      return;
+    }
+    if (pendingAction === "join" && selectedAnimalClaimed) {
+      toast({ title: t("home.animalUnavailable"), variant: "destructive" });
+      return;
+    }
+
+    if (pendingAction === "create") {
+      handleCreate();
+    } else if (pendingAction === "join") {
+      handleJoin();
+    }
   };
 
   return (
@@ -106,6 +157,7 @@ export default function Home() {
           </div>
 
           <nav className="flex items-center gap-2">
+            <SoundToggle />
             <button
               type="button"
               onClick={focusForm}
@@ -178,36 +230,31 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Name input — underline only, no box */}
+          {/* Join room — code input + button side by side, no box border */}
           <div className="space-y-1">
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/50">
-              {t("home.nameLabel")}
+              {t("home.joinPrompt")}
             </label>
-            <Input
-              ref={nameInputRef}
-              placeholder={t("home.namePlaceholder")}
-              className="text-xl py-5 font-bold bg-transparent border-0 border-b-2 border-white/25 rounded-none focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 px-0 placeholder:text-foreground/35 shadow-none"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={15}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            />
+            <div className="flex gap-2 items-center">
+              <Input
+                ref={roomCodeInputRef}
+                placeholder={t("home.roomCodePlaceholder")}
+                className="text-center uppercase text-xl font-black tracking-[0.35em] py-4 bg-transparent border-0 border-b-2 border-white/25 rounded-none focus:border-secondary focus-visible:ring-0 focus-visible:ring-offset-0 px-0 placeholder:text-foreground/30 placeholder:tracking-normal shadow-none"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                maxLength={4}
+                onKeyDown={(e) => e.key === "Enter" && requestJoin()}
+              />
+              <Button
+                variant="secondary"
+                className="py-4 px-6 text-base font-bold rounded-full hover:-translate-y-0.5 transition-transform shrink-0"
+                onClick={requestJoin}
+                disabled={createRoom.isPending || joinRoom.isPending}
+              >
+                {t("home.joinRoom")}
+              </Button>
+            </div>
           </div>
-
-          {/* Create room — full-width gradient pill */}
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={createRoom.isPending || joinRoom.isPending}
-            className="group relative w-full overflow-hidden rounded-full py-4 text-base font-extrabold tracking-wide text-primary-foreground shadow-xl transition-all hover:-translate-y-0.5 hover:shadow-2xl active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed mt-1"
-            style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
-          >
-            <span
-              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full"
-              aria-hidden
-            />
-            <span className="relative">{t("home.createRoom")}</span>
-          </button>
 
           {/* Divider */}
           <div className="flex items-center gap-3">
@@ -218,28 +265,93 @@ export default function Home() {
             <span className="flex-1 border-t border-white/12" />
           </div>
 
-          {/* Join row — code input + button side by side, no box border */}
-          <div className="flex gap-2 items-center">
-            <Input
-              placeholder={t("home.roomCodePlaceholder")}
-              className="text-center uppercase text-xl font-black tracking-[0.35em] py-4 bg-transparent border-0 border-b-2 border-white/25 rounded-none focus:border-secondary focus-visible:ring-0 focus-visible:ring-offset-0 px-0 placeholder:text-foreground/30 placeholder:tracking-normal shadow-none"
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              maxLength={4}
-              onKeyDown={(e) => e.key === "Enter" && handleJoin()}
+          {/* Create room — full-width gradient pill */}
+          <button
+            type="button"
+            onClick={requestCreate}
+            disabled={createRoom.isPending || joinRoom.isPending}
+            className="group relative w-full overflow-hidden rounded-full py-4 text-base font-extrabold tracking-wide text-primary-foreground shadow-xl transition-all hover:-translate-y-0.5 hover:shadow-2xl active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
+          >
+            <span
+              className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+              aria-hidden
             />
-            <Button
-              variant="secondary"
-              className="py-4 px-6 text-base font-bold rounded-full hover:-translate-y-0.5 transition-transform shrink-0"
-              onClick={handleJoin}
-              disabled={createRoom.isPending || joinRoom.isPending}
-            >
-              {t("home.joinRoom")}
-            </Button>
-          </div>
+            <span className="relative">{t("home.createRoom")}</span>
+          </button>
 
         </div>
       </main>
+
+      <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
+        <DialogContent className="max-w-sm gap-5 rounded-[28px] border-primary/30 bg-background/95 p-5 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:p-7 [&>button:last-child]:right-5 [&>button:last-child]:top-5 [&>button:last-child]:rounded-full [&>button:last-child]:bg-white/5 [&>button:last-child]:p-1 [&>button:last-child]:opacity-100">
+          <DialogHeader className="pr-8 text-left">
+            <DialogTitle className="text-3xl font-black tracking-tight">
+              {t("home.namePromptTitle")}
+            </DialogTitle>
+            <DialogDescription className="text-base leading-snug text-foreground/65">
+              {pendingAction === "join" ? t("home.joinNamePrompt") : t("home.createNamePrompt")}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/50">
+              {t("home.nameLabel")}
+            </label>
+            <Input
+              autoFocus
+              placeholder={t("home.namePlaceholder")}
+              className="h-12 rounded-2xl border border-white/15 bg-white/[0.06] px-4 text-lg font-bold shadow-none placeholder:text-foreground/35 focus:border-primary focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={15}
+              onKeyDown={(e) => e.key === "Enter" && submitName()}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground/50">
+              {t("home.animalLabel")}
+            </p>
+            <div className="grid grid-cols-4 gap-3">
+              {ANIMAL_OPTIONS.map((option) => {
+                const selected = option.id === animal;
+                const claimedBy = claimedAnimals.get(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setAnimal(option.id)}
+                    aria-pressed={selected}
+                    aria-label={option.label}
+                    title={claimedBy ? t("home.animalClaimedBy", { name: claimedBy }) : option.label}
+                    disabled={Boolean(claimedBy)}
+                    className={`flex aspect-square w-full max-w-16 justify-self-center items-center justify-center rounded-full border text-2xl transition-all duration-200 ${
+                      claimedBy
+                        ? "cursor-not-allowed border-white/10 bg-white/[0.025] opacity-30 grayscale"
+                        : selected
+                          ? "border-primary bg-primary/20 ring-2 ring-primary/70 ring-offset-2 ring-offset-background shadow-lg shadow-primary/20 scale-110"
+                          : "border-white/15 bg-white/[0.05] hover:-translate-y-0.5 hover:border-primary/50 hover:bg-white/[0.1]"
+                    }`}
+                  >
+                    <span aria-hidden>{option.emoji}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={submitName}
+            disabled={createRoom.isPending || joinRoom.isPending || selectedAnimalClaimed || noAnimalsAvailable}
+            className="group relative w-full overflow-hidden rounded-full py-4 text-base font-extrabold tracking-wide text-primary-foreground shadow-xl transition-all hover:-translate-y-0.5 hover:shadow-2xl active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
+          >
+            <span className="relative">{pendingAction === "join" ? t("home.joinRoom") : t("home.createRoom")}</span>
+          </button>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Tutorial Dialog ────────────────────────────────────── */}
       <Dialog open={tutorialOpen} onOpenChange={setTutorialOpen}>

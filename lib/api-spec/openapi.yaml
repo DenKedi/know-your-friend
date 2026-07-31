@@ -136,12 +136,15 @@ components:
       properties:
         hostName:
           type: string
+        animal:
+          $ref: "#/components/schemas/Animal"
         totalRounds:
           type: integer
         language:
           $ref: "#/components/schemas/LanguageCode"
       required:
         - hostName
+        - animal
         - totalRounds
         - language
 
@@ -150,8 +153,23 @@ components:
       properties:
         playerName:
           type: string
+        animal:
+          $ref: "#/components/schemas/Animal"
       required:
         - playerName
+        - animal
+
+    Animal:
+      type: string
+      enum:
+        - fox
+        - raccoon
+        - hedgehog
+        - deer
+        - bear
+        - wolf
+        - owl
+        - squirrel
 
     JoinRoomResponse:
       type: object
@@ -187,6 +205,8 @@ components:
           type: string
         name:
           type: string
+        animal:
+          $ref: "#/components/schemas/Animal"
         score:
           type: integer
         isHost:

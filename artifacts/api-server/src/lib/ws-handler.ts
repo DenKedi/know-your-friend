@@ -16,8 +16,10 @@ import {
   leaveRoom,
   getRoomStateForClient,
   setRoundsPerPlayer,
+  setRoomLanguage,
 } from "./game-engine";
 import { GAMEPLAY_CONFIG } from "./gameplay-config";
+import { isLanguageCode } from "./languages";
 
 const roomClients = new Map<string, Map<string, WebSocket>>();
 
@@ -275,6 +277,18 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
           const okRpp = setRoundsPerPlayer(currentRoom, rpp);
           if (!okRpp) {
             ws.send(JSON.stringify({ type: "error", message: "Cannot change rounds now" }));
+            return;
+          }
+          broadcastState(roomCode);
+          break;
+        }
+        case "set_language": {
+          if (!currentPlayer.isHost) {
+            ws.send(JSON.stringify({ type: "error", message: "Only the host can change the language" }));
+            return;
+          }
+          if (!isLanguageCode(msg.language) || !setRoomLanguage(currentRoom, msg.language)) {
+            ws.send(JSON.stringify({ type: "error", message: "Cannot change language now" }));
             return;
           }
           broadcastState(roomCode);

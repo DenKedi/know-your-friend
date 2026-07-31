@@ -13,6 +13,19 @@ export interface ErrorResponse {
   error: string;
 }
 
+export type Animal = (typeof Animal)[keyof typeof Animal];
+
+export const Animal = {
+  fox: "fox",
+  raccoon: "raccoon",
+  hedgehog: "hedgehog",
+  deer: "deer",
+  bear: "bear",
+  wolf: "wolf",
+  owl: "owl",
+  squirrel: "squirrel",
+} as const;
+
 export type LanguageCode = (typeof LanguageCode)[keyof typeof LanguageCode];
 
 export const LanguageCode = {
@@ -26,12 +39,14 @@ export const LanguageCode = {
 
 export interface CreateRoomBody {
   hostName: string;
+  animal: Animal;
   totalRounds: number;
   language: LanguageCode;
 }
 
 export interface JoinRoomBody {
   playerName: string;
+  animal: Animal;
 }
 
 export interface JoinRoomResponse {
@@ -44,6 +59,7 @@ export interface JoinRoomResponse {
 export interface Player {
   id: string;
   name: string;
+  animal?: Animal;
   score: number;
   isHost: boolean;
 }
@@ -66,10 +82,6 @@ export interface GuessResult {
   guess: number;
   selfRating: number;
   diff: number;
-  /** Score earned from the standard distance-based formula before any close-guess reward. */
-  basePoints: number;
-  /** Extra score earned for an exact or near-exact guess. */
-  bonusPoints: number;
   points: number;
   /** Recorded slider extrema (direction-reversal points) from the guesser's drag, in chronological order. Always starts with the initial value and ends with the submitted guess. Empty if the guesser did not drag. */
   path?: number[];

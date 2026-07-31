@@ -4,6 +4,7 @@ import { wsUrl } from "../lib/api-base";
 import { useToast } from "./use-toast";
 import { useI18n } from "@/lib/i18n";
 import { useDevGame, DEV_ROOM_CODE } from "@/lib/dev-game-context";
+import type { LanguageCode } from "@/lib/i18n";
 
 export type GameRoomState = RoomState & {
   nextPlayerId?: string | null;
@@ -23,7 +24,8 @@ type OutgoingMessage =
   | { type: "reroll_categories" }
   | { type: "end_game_early" }
   | { type: "leave_room" }
-  | { type: "set_rounds_per_player"; roundsPerPlayer: number };
+  | { type: "set_rounds_per_player"; roundsPerPlayer: number }
+  | { type: "set_language"; language: LanguageCode };
 
 type IncomingMessage =
   | { type: "state"; state: GameRoomState }

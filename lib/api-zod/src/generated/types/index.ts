@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./animal";
 export * from "./category";
 export * from "./createRoomBody";
 export * from "./errorResponse";

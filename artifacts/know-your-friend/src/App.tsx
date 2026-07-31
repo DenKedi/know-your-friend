@@ -13,6 +13,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { CampfireScene } from "@/components/scene/campfire-scene";
 import { DevGameProvider } from "@/lib/dev-game-context";
 import { DevToolbar } from "@/components/dev/dev-toolbar";
+import { SoundProvider } from "@/lib/sound";
 
 const queryClient = new QueryClient();
 
@@ -37,10 +38,12 @@ function App() {
         <I18nProvider>
           <TooltipProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <CampfireScene>
-                <Router />
-              </CampfireScene>
-              {import.meta.env.DEV && <DevToolbar />}
+              <SoundProvider>
+                <CampfireScene>
+                  <Router />
+                </CampfireScene>
+                {import.meta.env.DEV && <DevToolbar />}
+              </SoundProvider>
             </WouterRouter>
             <Toaster />
           </TooltipProvider>

@@ -23,7 +23,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { DEFAULT_SCENE } from "@/lib/scene-config";
+import { DEFAULT_SCENE, getAnimalEmoji } from "@/lib/scene-config";
+import { SoundToggle } from "@/components/sound-toggle";
+import { useSound } from "@/lib/sound";
 
 // Keep the wood texture decoded in memory. When the browser re-rasterizes
 // composited layers (e.g. on zoom in/out), the texture would otherwise be
@@ -115,7 +117,9 @@ function ScoreReveal({
         const progress = Math.min(elapsed / REVEAL_COUNT_DURATION, 1);
         const eased = 1 - Math.pow(1 - progress, 3);
         setDisplayed(Math.round(prevScore + eased * pointsEarned));
-        if (progress < 1) rafRef.current = requestAnimationFrame(tick);
+        if (progress < 1) {
+          rafRef.current = requestAnimationFrame(tick);
+        }
       };
       rafRef.current = requestAnimationFrame(tick);
     }, countDelayMs + 150);
@@ -257,6 +261,7 @@ export default function Game() {
           />
         </div>
         <div className="flex items-center gap-1.5">
+          <SoundToggle />
           {canEndEarly && (
             <Button
               variant="ghost"
@@ -473,7 +478,7 @@ export default function Game() {
                     return {
                       value: r.guess,
                       label: r.playerName,
-                      animal: idx >= 0 ? DEFAULT_SCENE.slots[idx]?.placeholder : undefined,
+                      animal: getAnimalEmoji(state.players[idx]?.animal) ?? DEFAULT_SCENE.slots[idx]?.placeholder,
                       delayMs: GUESS_BASE + rank * STEP,
                       highlight: rank === bestRank,
                       path: r.path,
@@ -826,11 +831,11 @@ function CategorySignpost({
   rerollLabel: string;
   rerollUsedLabel: string;
 }) {
+  const { play } = useSound();
   const [displayed, setDisplayed] = useState<Category[]>(categories);
   const [phase, setPhase] = useState<"enter" | "spin" | "idle" | "select">("enter");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const prevIdsRef = useRef<string>(categories.map((c) => c.id).join(","));
-
   // End the initial enter phase after the last sign's enter animation finishes.
   useEffect(() => {
     const enterEnd =
@@ -839,7 +844,9 @@ function CategorySignpost({
       () => setPhase((p) => (p === "enter" ? "idle" : p)),
       enterEnd,
     );
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -901,6 +908,7 @@ function CategorySignpost({
 
   const handlePick = (id: string) => {
     if (phase !== "idle" || selectedId) return;
+    play("categorySelect");
     setSelectedId(id);
     setPhase("select");
   };
@@ -1029,6 +1037,7 @@ function WoodenSign({
   return (
     <button
       onClick={onClick}
+      data-sound="off"
       className={cn("relative block group", animationClass)}
       style={{
         width:

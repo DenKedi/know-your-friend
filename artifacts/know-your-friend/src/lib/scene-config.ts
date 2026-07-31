@@ -12,6 +12,23 @@ export type SlotRenderer = "placeholder" | "image" | "lottie" | "video";
 
 export type LabelPlacement = "above" | "below";
 
+export const ANIMAL_OPTIONS = [
+  { id: "fox", emoji: "🦊", label: "Fox" },
+  { id: "raccoon", emoji: "🦝", label: "Raccoon" },
+  { id: "hedgehog", emoji: "🦔", label: "Hedgehog" },
+  { id: "deer", emoji: "🦌", label: "Deer" },
+  { id: "bear", emoji: "🐻", label: "Bear" },
+  { id: "wolf", emoji: "🐺", label: "Wolf" },
+  { id: "owl", emoji: "🦉", label: "Owl" },
+  { id: "squirrel", emoji: "🐿️", label: "Squirrel" },
+] as const;
+
+export type AnimalId = (typeof ANIMAL_OPTIONS)[number]["id"];
+
+export function getAnimalEmoji(animal?: string): string | undefined {
+  return ANIMAL_OPTIONS.find((option) => option.id === animal)?.emoji;
+}
+
 export type SlotConfig = {
   id: string;
   /** Horizontal anchor in % (center of the character). */

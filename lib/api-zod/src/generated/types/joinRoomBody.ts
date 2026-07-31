@@ -5,7 +5,9 @@
  * Know Your Friend game API
  * OpenAPI spec version: 0.1.0
  */
+import type { Animal } from "./animal";
 
 export interface JoinRoomBody {
   playerName: string;
+  animal: Animal;
 }

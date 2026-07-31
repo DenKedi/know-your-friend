@@ -17,7 +17,6 @@ export default function Results() {
   const { state } = useGameSocket(roomCode);
   const [showScores, setShowScores] = useState(false);
   const { t } = useI18n();
-
   useEffect(() => {
     const t = setTimeout(() => setShowScores(true), 400);
     return () => clearTimeout(t);

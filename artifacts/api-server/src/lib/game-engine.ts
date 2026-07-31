@@ -9,9 +9,13 @@ import { GAMEPLAY_CONFIG } from "./gameplay-config";
 
 export type { LocalizedCategory as Category };
 
+export const ANIMALS = ["fox", "raccoon", "hedgehog", "deer", "bear", "wolf", "owl", "squirrel"] as const;
+export type Animal = (typeof ANIMALS)[number];
+
 export interface Player {
   id: string;
   name: string;
+  animal: Animal;
   score: number;
   isHost: boolean;
   token: string;
@@ -103,7 +107,12 @@ function pickCategoriesForTurn(room: Room, extraExcludeIds?: Set<string>): void 
   room.currentAvailableCategories = shuffled.slice(0, Math.min(GAMEPLAY_CONFIG.CATEGORIES_PER_TURN, shuffled.length));
 }
 
-export function createRoom(hostName: string, totalRounds: number, language: LanguageCode): { room: Room; player: Player } {
+export function createRoom(
+  hostName: string,
+  totalRounds: number,
+  language: LanguageCode,
+  animal: Animal
+): { room: Room; player: Player } {
   let code: string;
   do {
     code = generateCode();
@@ -115,6 +124,7 @@ export function createRoom(hostName: string, totalRounds: number, language: Lang
   const host: Player = {
     id: hostId,
     name: hostName,
+    animal,
     score: 0,
     isHost: true,
     token: hostToken,
@@ -149,7 +159,8 @@ export function createRoom(hostName: string, totalRounds: number, language: Lang
 
 export function joinRoom(
   roomCode: string,
-  playerName: string
+  playerName: string,
+  animal: Animal
 ): { room: Room; player: Player } | null {
   const room = rooms.get(roomCode);
   if (!room) return null;
@@ -161,6 +172,7 @@ export function joinRoom(
   const player: Player = {
     id: playerId,
     name: playerName,
+    animal,
     score: 0,
     isHost: false,
     token: playerToken,
@@ -178,6 +190,12 @@ export function setRoundsPerPlayer(room: Room, roundsPerPlayer: number): boolean
   if (roundsPerPlayer < 1 || roundsPerPlayer > 10) return false;
   room.roundsPerPlayer = roundsPerPlayer;
   room.totalRounds = room.players.length * roundsPerPlayer;
+  return true;
+}
+
+export function setRoomLanguage(room: Room, language: LanguageCode): boolean {
+  if (room.status !== "waiting") return false;
+  room.language = language;
   return true;
 }
 
@@ -390,6 +408,7 @@ export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
     players: room.players.map((p) => ({
       id: p.id,
       name: p.name,
+      animal: p.animal,
       score: p.score,
       isHost: p.isHost,
     })),

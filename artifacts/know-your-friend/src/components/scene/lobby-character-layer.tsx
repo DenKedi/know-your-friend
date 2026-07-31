@@ -4,7 +4,7 @@ import { usePlayerJoinEvents } from "@/hooks/use-player-join-events";
 import { AnimalCharacter } from "./animal-character";
 import { NameLabel } from "./name-label";
 
-type Player = { id: string; name: string; isHost: boolean };
+type Player = { id: string; name: string; animal?: string; isHost: boolean };
 
 type Props = {
   players: readonly Player[];
@@ -25,7 +25,7 @@ export function LobbyCharacterLayer({ players }: Props) {
         const isEntering = enteringIds.has(player.id);
         return (
           <div key={player.id}>
-            <AnimalCharacter slot={slot} isEntering={isEntering} />
+            <AnimalCharacter slot={slot} animal={player.animal} isEntering={isEntering} />
             <NameLabel
               name={player.name}
               isHost={player.isHost}

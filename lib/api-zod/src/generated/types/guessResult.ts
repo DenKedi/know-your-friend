@@ -12,10 +12,6 @@ export interface GuessResult {
   guess: number;
   selfRating: number;
   diff: number;
-  /** Score earned from the standard distance-based formula before any close-guess reward. */
-  basePoints: number;
-  /** Extra score earned for an exact or near-exact guess. */
-  bonusPoints: number;
   points: number;
   /** Recorded slider extrema (direction-reversal points) from the guesser's drag, in chronological order. Always starts with the initial value and ends with the submitted guess. Empty if the guesser did not drag. */
   path?: number[];

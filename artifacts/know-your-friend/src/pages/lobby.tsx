@@ -1,23 +1,48 @@
 import { useRoute, useLocation } from "wouter";
 import { useGameSocket } from "@/hooks/use-game-socket";
 import { Button } from "@/components/ui/button";
-import { useEffect } from "react";
-import { getLanguageOption, useI18n } from "@/lib/i18n";
+import { useEffect, useRef, useState } from "react";
+import { LANGUAGE_OPTIONS, getLanguageOption, useI18n } from "@/lib/i18n";
 import { LobbyCharacterLayer } from "@/components/scene/lobby-character-layer";
+import { JoinRoomQr } from "@/components/join-room-qr";
 import fireIcon from "@/assets/icons/Fire_1.png";
+import { SoundToggle } from "@/components/sound-toggle";
+import { Flag } from "@/components/flag";
+import { useSound } from "@/lib/sound";
 
 export default function Lobby() {
   const [match, params] = useRoute("/room/:code/lobby");
   const roomCode = params?.code;
   const [, setLocation] = useLocation();
   const { state, send, isConnected } = useGameSocket(roomCode);
-  const { t } = useI18n();
+  const { t, setLanguage } = useI18n();
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
+  const { play } = useSound();
+  const knownPlayerIdsRef = useRef<Set<string> | null>(null);
 
   useEffect(() => {
     if (state?.status && state.status !== "waiting") {
       setLocation(`/room/${roomCode}/game`);
     }
   }, [state?.status, roomCode, setLocation]);
+
+  useEffect(() => {
+    if (state?.language) {
+      setLanguage(state.language);
+    }
+  }, [state?.language, setLanguage]);
+
+  useEffect(() => {
+    if (!state) return;
+
+    const playerIds = new Set(state.players.map((player) => player.id));
+    const knownPlayerIds = knownPlayerIdsRef.current;
+    knownPlayerIdsRef.current = playerIds;
+
+    if (knownPlayerIds && [...playerIds].some((id) => !knownPlayerIds.has(id))) {
+      play("characterJoin");
+    }
+  }, [play, state]);
 
   if (!match || !roomCode) return null;
 
@@ -62,17 +87,60 @@ export default function Lobby() {
                 <span className="text-xl sm:text-2xl font-black text-primary tracking-[0.18em] truncate">
                   {roomCode}
                 </span>
+                <JoinRoomQr roomCode={roomCode} />
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <span
-                className="text-base leading-none select-none"
-                aria-label={langOption.label}
-                title={langOption.label}
-              >
-                {langOption.flag}
-              </span>
+              <SoundToggle />
+              {isHost ? (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setLanguageMenuOpen((open) => !open)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-background/40 p-1.5 transition-colors hover:border-primary/50 hover:bg-primary/10"
+                    aria-label={langOption.label}
+                    aria-expanded={languageMenuOpen}
+                    aria-controls="room-language-menu"
+                    title={langOption.label}
+                  >
+                    <Flag code={state.language} className="h-full w-full rounded-sm" />
+                  </button>
+                  {languageMenuOpen && (
+                    <div
+                      id="room-language-menu"
+                      className="absolute right-0 top-full z-50 mt-2 min-w-36 rounded-2xl border border-primary/30 bg-background/95 p-1.5 shadow-2xl shadow-black/40 backdrop-blur-2xl animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-150"
+                      role="menu"
+                    >
+                      {LANGUAGE_OPTIONS.map((option) => {
+                        const active = option.code === state.language;
+                        return (
+                          <button
+                            key={option.code}
+                            type="button"
+                            onClick={() => {
+                              send({ type: "set_language", language: option.code });
+                              setLanguageMenuOpen(false);
+                            }}
+                            className={`flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-sm font-semibold transition-colors hover:bg-white/10 ${
+                              active ? "text-primary" : "text-foreground"
+                            }`}
+                            role="menuitemradio"
+                            aria-checked={active}
+                          >
+                            <Flag code={option.code} className="h-3.5 w-5 rounded-[2px]" />
+                            <span>{option.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="inline-flex h-5 w-6" aria-label={langOption.label} title={langOption.label}>
+                  <Flag code={state.language} className="h-full w-full rounded-[2px]" />
+                </span>
+              )}
 
               <div className="flex items-center gap-1.5">
                 <span className="hidden sm:inline text-[10px] font-bold uppercase text-foreground/50 tracking-wider">
