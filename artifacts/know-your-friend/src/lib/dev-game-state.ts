@@ -132,7 +132,7 @@ export function createInitialDevState(config: DevGameConfig): GameRoomState {
     status: "waiting",
     players,
     currentRound: 1,
-    totalRounds: config.roundsPerPlayer * players.length,
+    totalRounds: config.roundsPerPlayer,
     roundsPerPlayer: config.roundsPerPlayer,
     currentPlayerId: null,
     currentCategory: null,
@@ -430,7 +430,7 @@ export function applyDevAction(
       return {
         ...state,
         roundsPerPlayer: rpp,
-        totalRounds: rpp * state.players.length,
+        totalRounds: rpp,
       };
     }
 

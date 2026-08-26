@@ -17,6 +17,7 @@ Rules:
 - Never return a category without all six languages.
 - Never leave placeholders like `TODO`, `same as English`, or empty strings.
 - Keep each text short enough for mobile UI.
+- Try to find phrases that are colloquial and natural in each language, even if that means not translating literally.
 - If the user provides only one language, infer the others and make them natural, not literal word-for-word copies.
 - If a phrase is culturally awkward, adapt it while keeping the same left-to-right contrast.
 

@@ -180,7 +180,7 @@ export function joinRoom(
 
   room.players.push(player);
   if (room.status === "waiting") {
-    room.totalRounds = room.players.length * room.roundsPerPlayer;
+    room.totalRounds = room.roundsPerPlayer;
   }
   return { room, player };
 }
@@ -189,7 +189,7 @@ export function setRoundsPerPlayer(room: Room, roundsPerPlayer: number): boolean
   if (room.status !== "waiting") return false;
   if (roundsPerPlayer < 1 || roundsPerPlayer > 10) return false;
   room.roundsPerPlayer = roundsPerPlayer;
-  room.totalRounds = room.players.length * roundsPerPlayer;
+  room.totalRounds = roundsPerPlayer;
   return true;
 }
 
@@ -468,7 +468,7 @@ export function leaveRoom(room: Room, playerId: string): { success: boolean; roo
   }
 
   if (room.status === "waiting") {
-    room.totalRounds = room.players.length * room.roundsPerPlayer;
+    room.totalRounds = room.roundsPerPlayer;
   }
 
   return { success: true, roomDeleted: false };
