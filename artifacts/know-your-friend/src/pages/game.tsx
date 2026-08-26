@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { useRoute, useLocation } from "wouter";
 import woodTexture from "@/assets/images/Wood-texture.png";
 import { useGameSocket } from "@/hooks/use-game-socket";
 import { Button } from "@/components/ui/button";
-import { GameSlider } from "@/components/game-slider";
+import { GameSlider, ResultLegend, type SliderMarker } from "@/components/game-slider";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { DEFAULT_SCENE, getAnimalEmoji } from "@/lib/scene-config";
+import { DEFAULT_SCENE, getAnimalColor, getAnimalEmoji } from "@/lib/scene-config";
 import { SoundToggle } from "@/components/sound-toggle";
 import { useSound } from "@/lib/sound";
 
@@ -47,17 +48,43 @@ const MARKER_COLORS = [
 ];
 
 // Reveal animation timing (must match the IIFE inside round_results)
-const REVEAL_TRUTH_DELAY = 200;
 const REVEAL_PATH_DURATION = 3000;
-const REVEAL_GUESS_BASE = REVEAL_TRUTH_DELAY + REVEAL_PATH_DURATION + 200;
-const REVEAL_STEP = 3500;
-const REVEAL_ROW_OFFSET = 200;
-const REVEAL_COUNT_OFFSET = REVEAL_PATH_DURATION - 300;
+const STAR_REVEAL_PATH_DURATION = 5000;
+const REVEAL_GUESS_BASE = 200;
+const REVEAL_STEP = 3250;
 const REVEAL_COUNT_DURATION = 700;
-const REVEAL_SORT_BUFFER = 500;
+const SCORE_CALCULATION_DELAY = 1000;
+const SCORE_BADGE_LEAD_IN = 1000;
+const LEADERBOARD_RESHUFFLE_BUFFER = 800;
+const STAGE_TRANSITION_MS = 600;
+const ROUND_RESULT_ROW_STEP = 280;
+const ROUND_RESULTS_HOLD_MS = 1400;
+
+type ResultPhase = "slider" | "slider_exit" | "round_results" | "round_results_exit" | "leaderboard";
 
 function colorForIndex(i: number) {
   return MARKER_COLORS[i % MARKER_COLORS.length]!;
+}
+
+function colorForPlayer(animal: string | undefined, fallbackIndex: number) {
+  return getAnimalColor(animal) ?? colorForIndex(fallbackIndex);
+}
+
+function shuffleForRound(playerIds: string[], seedSource: string): string[] {
+  let seed = 0;
+  for (let index = 0; index < seedSource.length; index++) {
+    seed = Math.imul(31, seed) + seedSource.charCodeAt(index) | 0;
+  }
+  const random = () => {
+    seed = Math.imul(1664525, seed) + 1013904223 | 0;
+    return (seed >>> 0) / 4294967296;
+  };
+  const shuffled = [...playerIds];
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex]!, shuffled[index]!];
+  }
+  return shuffled;
 }
 
 /** Counts from 0 to `target` over `duration` ms, starting after `delayMs`. */
@@ -122,7 +149,7 @@ function ScoreReveal({
         }
       };
       rafRef.current = requestAnimationFrame(tick);
-    }, countDelayMs + 150);
+    }, countDelayMs + SCORE_BADGE_LEAD_IN);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -161,33 +188,40 @@ export default function Game() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showStandings, setShowStandings] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [resultPhase, setResultPhase] = useState<ResultPhase>("slider");
   const [leaderboardSorted, setLeaderboardSorted] = useState(false);
-  const [leaderboardFading, setLeaderboardFading] = useState(false);
-  const sortTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    setResultPhase("slider");
     setLeaderboardSorted(false);
-    setLeaderboardFading(false);
-    if (sortTimerRef.current) clearTimeout(sortTimerRef.current);
-    if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
     if (state?.status !== "round_results" || !state.roundResults?.length) return;
 
     const n = state.roundResults.length;
-    const lastDelay = REVEAL_GUESS_BASE + (n - 1) * REVEAL_STEP;
-    const sortAfterMs = lastDelay + REVEAL_COUNT_OFFSET + REVEAL_COUNT_DURATION + REVEAL_SORT_BUFFER;
-
-    sortTimerRef.current = setTimeout(() => {
-      setLeaderboardFading(true);
-      fadeTimerRef.current = setTimeout(() => {
-        setLeaderboardSorted(true);
-        setLeaderboardFading(false);
-      }, 300);
-    }, sortAfterMs);
+    const truthDelay = REVEAL_GUESS_BASE + n * REVEAL_STEP;
+    const sliderRevealMs = truthDelay + STAR_REVEAL_PATH_DURATION + 450;
+    const roundResultsMs = (n + 1) * ROUND_RESULT_ROW_STEP + ROUND_RESULTS_HOLD_MS;
+    const sliderExit = setTimeout(() => setResultPhase("slider_exit"), sliderRevealMs);
+    const roundResults = setTimeout(() => setResultPhase("round_results"), sliderRevealMs + STAGE_TRANSITION_MS);
+    const roundResultsExit = setTimeout(
+      () => setResultPhase("round_results_exit"),
+      sliderRevealMs + STAGE_TRANSITION_MS + roundResultsMs,
+    );
+    const leaderboard = setTimeout(
+      () => setResultPhase("leaderboard"),
+      sliderRevealMs + STAGE_TRANSITION_MS * 2 + roundResultsMs,
+    );
+    const lastScoreCalculationMs = SCORE_CALCULATION_DELAY + SCORE_BADGE_LEAD_IN + REVEAL_COUNT_DURATION;
+    const sortLeaderboard = setTimeout(
+      () => setLeaderboardSorted(true),
+      sliderRevealMs + STAGE_TRANSITION_MS * 2 + roundResultsMs + lastScoreCalculationMs + LEADERBOARD_RESHUFFLE_BUFFER,
+    );
 
     return () => {
-      if (sortTimerRef.current) clearTimeout(sortTimerRef.current);
-      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current);
+      clearTimeout(sliderExit);
+      clearTimeout(roundResults);
+      clearTimeout(roundResultsExit);
+      clearTimeout(leaderboard);
+      clearTimeout(sortLeaderboard);
     };
   }, [state?.status, state?.currentRound]);
 
@@ -243,6 +277,45 @@ export default function Game() {
     state.status !== "waiting" &&
     state.status !== "game_over" &&
     state.currentRound < state.totalRounds;
+
+  const resultMarkers: SliderMarker[] = (() => {
+    if (state.status !== "round_results" || !state.roundResults) return [];
+    const resultsByPlayerId = new Map(state.roundResults.map((result) => [result.playerId, result]));
+    const shuffledResults = shuffleForRound(
+      state.roundResults.map((result) => result.playerId),
+      `${roomCode}:${state.currentRound}:${state.currentPlayerId}`,
+    )
+      .map((playerId) => resultsByPlayerId.get(playerId))
+      .filter((result): result is NonNullable<typeof result> => result !== undefined);
+    const revealResults = shuffledResults;
+    const truthDelay = REVEAL_GUESS_BASE + revealResults.length * REVEAL_STEP;
+    const truthPath = revealResults[0]?.selfRatingPath;
+    return [
+      ...revealResults.map((result, rank) => {
+        const playerIndex = state.players.findIndex((player) => player.id === result.playerId);
+        return {
+          value: result.guess,
+          label: result.playerName,
+          points: result.points,
+          animal: getAnimalEmoji(state.players[playerIndex]?.animal) ?? DEFAULT_SCENE.slots[playerIndex]?.placeholder,
+          color: colorForPlayer(state.players[playerIndex]?.animal, playerIndex),
+          delayMs: REVEAL_GUESS_BASE + rank * REVEAL_STEP,
+          highlight: result.playerId === playerId,
+          path: result.path,
+          pathDurationMs: REVEAL_PATH_DURATION,
+        };
+      }),
+      {
+        value: state.selfRating ?? 0,
+        label: currentPlayer?.name ?? t("game.truth"),
+        points: 0,
+        isTruth: true,
+        delayMs: truthDelay,
+        path: truthPath,
+        pathDurationMs: STAR_REVEAL_PATH_DURATION,
+      },
+    ];
+  })();
 
   return (
     <div className="min-h-[100dvh] flex flex-col select-none">
@@ -438,7 +511,7 @@ export default function Game() {
 
         {/* ── RUNDEN-ERGEBNIS ─────────────────────────────────── */}
         {state.status === "round_results" && state.roundResults && (
-          <section className="w-full space-y-3 animate-in fade-in duration-500">
+          <section className="w-full min-h-[560px] flex flex-col animate-in fade-in duration-500">
             <div className="text-center">
               <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
                 {t("game.reveal")}
@@ -451,58 +524,45 @@ export default function Game() {
               </p>
             </div>
 
-            <GameSlider
-              disabled
-              leftLabel={state.currentCategoryLeftLabel}
-              rightLabel={state.currentCategoryRightLabel}
-              markers={(() => {
-                // Reveal sequence: truth first (slides along self-rating path), then guessers worst → best,
-                // each replaying their own slider drag path (~3s each, or 250ms dive-in if they were "sure").
-                const TRUTH_DELAY = 200;
-                const PATH_DURATION = 3000;
-                // Truth animation finishes around TRUTH_DELAY + PATH_DURATION; start guessers shortly after.
-                const GUESS_BASE = TRUTH_DELAY + PATH_DURATION + 200;
-                const STEP = 3500;
-                // rank: 0 = worst guesser, N-1 = best guesser
-                const rankByPlayerId = new Map<string, number>();
-                [...state.roundResults]
-                  .sort((a, b) => a.points - b.points)
-                  .forEach((r, k) => rankByPlayerId.set(r.playerId, k));
-                const bestRank = state.roundResults.length - 1;
-                // selfRatingPath is identical across results; read once.
-                const truthPath = state.roundResults[0]?.selfRatingPath;
-                return [
-                  ...state.roundResults.map((r) => {
-                    const idx = state.players.findIndex((p) => p.id === r.playerId);
-                    const rank = rankByPlayerId.get(r.playerId) ?? 0;
-                    return {
-                      value: r.guess,
-                      label: r.playerName,
-                      animal: getAnimalEmoji(state.players[idx]?.animal) ?? DEFAULT_SCENE.slots[idx]?.placeholder,
-                      delayMs: GUESS_BASE + rank * STEP,
-                      highlight: rank === bestRank,
-                      path: r.path,
-                      pathDurationMs: PATH_DURATION,
-                    };
-                  }),
-                  {
-                    value: state.selfRating ?? 0,
-                    label: currentPlayer?.name ?? t("game.truth"),
-                    isTruth: true,
-                    delayMs: TRUTH_DELAY,
-                    path: truthPath,
-                    pathDurationMs: PATH_DURATION,
-                  },
-                ];
-              })()}
-            />
+            {(resultPhase === "slider" || resultPhase === "slider_exit") && (
+              <div
+                className={cn(
+                  "flex-1 flex items-center transition-all duration-[600ms] ease-in-out",
+                  resultPhase === "slider_exit" && "opacity-0 scale-75 -translate-y-10",
+                )}
+              >
+                <GameSlider
+                  disabled
+                  showLegend={false}
+                  leftLabel={state.currentCategoryLeftLabel}
+                  rightLabel={state.currentCategoryRightLabel}
+                  markers={resultMarkers}
+                />
+              </div>
+            )}
 
-            <div
-              className={cn(
-                "divide-y divide-white/10 transition-opacity duration-300",
-                leaderboardFading && "opacity-0",
-              )}
-            >
+            {(resultPhase === "round_results" || resultPhase === "round_results_exit") && (
+              <div
+                className={cn(
+                  "flex-1 flex items-center justify-center transition-all duration-[600ms] ease-in-out",
+                  resultPhase === "round_results_exit" && "opacity-0 scale-75 -translate-y-10",
+                )}
+              >
+                <ResultLegend
+                  markers={resultMarkers}
+                  revealRows={resultPhase === "round_results"}
+                  showTruth={false}
+                  className="w-full max-w-lg mx-auto [&>div]:text-lg [&>div]:py-3 [&>div>div]:w-10 [&>div>div]:h-10 [&>div>div]:text-sm"
+                />
+              </div>
+            )}
+
+            {resultPhase === "leaderboard" && (
+            <div className="flex-1 flex flex-col justify-center w-full max-w-lg mx-auto animate-in fade-in zoom-in-95 duration-500">
+              <h3 className="text-center text-xl font-black text-primary uppercase tracking-tight mb-4">
+                {t("game.standings")}
+              </h3>
+              <div className="divide-y divide-white/10">
               {(() => {
                 // Build a full entry for every player; those absent from roundResults
                 // (i.e. the current player who self-rated) get 0 points earned.
@@ -512,8 +572,12 @@ export default function Game() {
                   return { playerId: p.id, playerName: p.name, points: result?.points ?? 0 };
                 });
 
-                // Pre-sort: worst→best for sequential reveal animation.
-                const animOrder = [...allRows].sort((a, b) => a.points - b.points);
+                // Before totals settle, retain the previous overall order; then refresh positions.
+                const animOrder = [...allRows].sort((a, b) => {
+                  const scoreA = (state.players.find((p) => p.id === a.playerId)?.score ?? 0) - a.points;
+                  const scoreB = (state.players.find((p) => p.id === b.playerId)?.score ?? 0) - b.points;
+                  return scoreB - scoreA;
+                });
                 // Post-sort: leader on top.
                 const displayOrder = leaderboardSorted
                   ? [...allRows].sort((a, b) => {
@@ -525,34 +589,31 @@ export default function Game() {
 
                 return displayOrder.map((r, k) => {
                   const originalIdx = state.players.findIndex((p) => p.id === r.playerId);
-                  const color = colorForIndex(originalIdx >= 0 ? originalIdx : k);
-                  const animRank = animOrder.findIndex((x) => x.playerId === r.playerId);
-                  const isBestThisRound = !leaderboardSorted && k === animOrder.length - 1;
-                  const isOverallLeader = leaderboardSorted && k === 0;
-                  const highlight = isBestThisRound || isOverallLeader;
-                  const markerDelay = leaderboardSorted ? 0 : REVEAL_GUESS_BASE + animRank * REVEAL_STEP;
+                  const color = colorForPlayer(state.players[originalIdx]?.animal, originalIdx >= 0 ? originalIdx : k);
+                  const highlight = r.playerId === playerId;
                   const playerTotalScore = state.players.find((p) => p.id === r.playerId)?.score ?? 0;
 
                   return (
-                    <div
+                    <motion.div
+                      layout="position"
+                      transition={{ duration: 1.25, ease: [0.22, 1, 0.36, 1] }}
                       key={r.playerId}
                       className={cn(
-                        "px-2 py-1.5 flex items-center justify-between",
-                        !leaderboardSorted && "animate-in slide-in-from-bottom-4",
+                        "px-3 py-3 flex items-center justify-between",
                         highlight && "bg-yellow-300/10 rounded-lg ring-1 ring-yellow-300/40",
                       )}
-                      style={
-                        !leaderboardSorted
-                          ? { animationDelay: `${markerDelay + REVEAL_ROW_OFFSET}ms`, animationFillMode: "both" }
-                          : undefined
-                      }
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        {leaderboardSorted && (
-                          <div className="w-6 text-center font-black text-muted-foreground tabular-nums text-sm flex-shrink-0">
+                        <div className="w-6 text-center font-black text-muted-foreground tabular-nums text-sm flex-shrink-0">
+                          <motion.span
+                            key={k}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                          >
                             {k + 1}.
-                          </div>
-                        )}
+                          </motion.span>
+                        </div>
                         <div
                           className={cn(
                             "w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black",
@@ -560,7 +621,7 @@ export default function Game() {
                           )}
                           style={{ background: color.bg, color: color.text }}
                         >
-                          {r.playerName.substring(0, 2).toUpperCase()}
+                          {getAnimalEmoji(state.players[originalIdx]?.animal) ?? r.playerName.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
                           <div className={cn("font-bold text-base truncate", highlight && "text-yellow-200")}>
@@ -571,24 +632,26 @@ export default function Game() {
                       <ScoreReveal
                         newTotal={playerTotalScore}
                         pointsEarned={r.points}
-                        countDelayMs={markerDelay + REVEAL_COUNT_OFFSET}
+                        countDelayMs={SCORE_CALCULATION_DELAY}
                         isBest={highlight}
                       />
-                    </div>
+                    </motion.div>
                   );
                 });
               })()}
+              </div>
             </div>
+            )}
 
             {/* Next-up hint */}
-            {!isLastTurn && nextPlayer && nextPlayer.id !== playerId && (
+            {resultPhase === "leaderboard" && !isLastTurn && nextPlayer && nextPlayer.id !== playerId && (
               <div className="text-center text-sm text-muted-foreground">
                 {t("game.nextUp", { name: nextPlayer.name })}
               </div>
             )}
 
             {/* Next button – only the next player can advance */}
-            <Button
+            {resultPhase === "leaderboard" && <Button
               className="w-full py-3 text-base font-black rounded-full"
               disabled={nextPlayer?.id !== playerId}
               onClick={handleNextTurn}
@@ -596,7 +659,7 @@ export default function Game() {
               {nextPlayer?.id !== playerId
                 ? t("game.waiting")
                 : isLastTurn ? t("game.endGame") : t("game.continue")}
-            </Button>
+            </Button>}
           </section>
         )}
       </main>
@@ -635,7 +698,7 @@ export default function Game() {
           <div className="space-y-2 mt-2">
             {sortedStandings.map((p, i) => {
               const originalIdx = state.players.findIndex((pl) => pl.id === p.id);
-              const color = colorForIndex(originalIdx);
+              const color = colorForPlayer(state.players[originalIdx]?.animal, originalIdx);
               const isMe = p.id === playerId;
               return (
                 <div
@@ -651,7 +714,7 @@ export default function Game() {
                     className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
                     style={{ background: color.bg, color: color.text }}
                   >
-                    {p.name.substring(0, 2).toUpperCase()}
+                    {getAnimalEmoji(p.animal) ?? p.name.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0 font-bold truncate">
                     {p.name} {isMe && <span className="text-xs text-muted-foreground font-normal">({t("common.you")})</span>}

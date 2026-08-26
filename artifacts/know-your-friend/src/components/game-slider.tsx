@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-interface SliderMarker {
+export interface SliderMarker {
   value: number;
   label: string;
+  color?: { bg: string; text: string };
+  /** Points earned for this guess in the current round. */
+  points?: number;
   isTruth?: boolean;
   /** Animal emoji from the player's scene slot. Falls back to initials if absent. */
   animal?: string;
@@ -31,7 +34,15 @@ interface GameSliderProps {
   leftLabel?: string | null;
   rightLabel?: string | null;
   markers?: SliderMarker[];
+  showLegend?: boolean;
   showValue?: boolean;
+}
+
+interface ResultLegendProps {
+  markers: SliderMarker[];
+  revealRows?: boolean;
+  showTruth?: boolean;
+  className?: string;
 }
 
 const MARKER_COLORS = [
@@ -75,7 +86,10 @@ function buildEffectivePath(marker: SliderMarker): { path: number[]; duration: n
   }
   const final = marker.value;
   const from = final < 50 ? 100 : 0;
-  return { path: [from, final], duration: DIVE_IN_DURATION };
+  return {
+    path: [from, final],
+    duration: marker.isTruth ? marker.pathDurationMs ?? DIVE_IN_DURATION : DIVE_IN_DURATION,
+  };
 }
 
 /**
@@ -160,6 +174,7 @@ export function GameSlider({
   leftLabel,
   rightLabel,
   markers = [],
+  showLegend = true,
   showValue = false,
 }: GameSliderProps) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -234,6 +249,17 @@ export function GameSlider({
   const guessMarkers = markers.filter((m) => !m.isTruth);
   const truthMarker = markers.find((m) => m.isTruth);
   const getAnimatedPos = useMarkerPosition(markers);
+  const labelRows = new Map<SliderMarker, number>();
+  [...markers]
+    .sort((a, b) => a.value - b.value)
+    .forEach((marker) => {
+      const nearbyRows = [...labelRows.entries()]
+        .filter(([other]) => Math.abs(other.value - marker.value) < 14)
+        .map(([, row]) => row);
+      let row = 0;
+      while (nearbyRows.includes(row)) row += 1;
+      labelRows.set(marker, row);
+    });
 
   return (
     <div className="w-full flex flex-col gap-2 py-4 select-none touch-none">
@@ -242,12 +268,12 @@ export function GameSlider({
       {markers.length > 0 && (
         <div className="relative h-12 mb-1">
           {guessMarkers.map((marker, i) => {
-            const color = MARKER_COLORS[i % MARKER_COLORS.length];
+            const color = marker.color ?? MARKER_COLORS[i % MARKER_COLORS.length];
             const { value: animValue, opacity } = getAnimatedPos(marker);
             return (
               <div
                 key={i}
-                className="absolute -translate-x-1/2 bottom-0 flex flex-col items-center"
+                className="absolute -translate-x-1/2 top-0 flex flex-col items-center"
                 style={{
                   left: `calc(${animValue}% * 0.88 + 6%)`,
                   opacity,
@@ -255,11 +281,7 @@ export function GameSlider({
                 }}
               >
                 <div
-                  className={cn(
-                    "w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shadow-lg border-2 border-white/20",
-                    marker.highlight &&
-                      "ring-2 ring-yellow-300 ring-offset-2 ring-offset-transparent shadow-[0_0_20px_rgba(253,224,71,0.75)] scale-110",
-                  )}
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shadow-lg border-2 border-white/20"
                   style={{ background: color.bg, color: color.text }}
                 >
                   {marker.animal ?? marker.label.substring(0, 2).toUpperCase()}
@@ -272,7 +294,7 @@ export function GameSlider({
             const { value: animValue, opacity } = getAnimatedPos(truthMarker);
             return (
               <div
-                className="absolute -translate-x-1/2 bottom-0 flex flex-col items-center z-20"
+                className="absolute -translate-x-1/2 top-0 flex flex-col items-center z-20"
                 style={{
                   left: `calc(${animValue}% * 0.88 + 6%)`,
                   opacity,
@@ -296,7 +318,7 @@ export function GameSlider({
           className={cn(
             "absolute left-[6%] right-[6%] h-4 rounded-full cursor-pointer shadow-inner overflow-hidden",
             disabled
-              ? "cursor-default bg-gradient-to-r from-primary/70 to-secondary/70"
+              ? "cursor-default bg-gradient-to-r from-primary to-secondary"
               : "bg-input"
           )}
           onPointerDown={handlePointerDown}
@@ -317,7 +339,7 @@ export function GameSlider({
 
           {/* Tick marks for guess markers on track */}
           {guessMarkers.map((marker, i) => {
-            const color = MARKER_COLORS[i % MARKER_COLORS.length];
+            const color = marker.color ?? MARKER_COLORS[i % MARKER_COLORS.length];
             const { value: animValue, opacity } = getAnimatedPos(marker);
             return (
               <div
@@ -357,6 +379,32 @@ export function GameSlider({
         )}
       </div>
 
+      {/* Marker names below the slider bar */}
+      {markers.length > 0 && (
+        <div className="relative h-12 px-[6%]">
+          {markers.map((marker, index) => {
+            const { value: animValue, opacity } = getAnimatedPos(marker);
+            const labelRow = labelRows.get(marker) ?? 0;
+            const color = marker.color ?? MARKER_COLORS[index % MARKER_COLORS.length];
+            return (
+              <div
+                key={`${marker.label}-${marker.value}`}
+                className="absolute -translate-x-1/2 text-center text-xs font-black leading-tight whitespace-nowrap"
+                style={{
+                  left: `calc(${animValue}% * 0.88 + 6%)`,
+                  top: `${labelRow * 18}px`,
+                  opacity,
+                  transition: "none",
+                  color: marker.isTruth ? "#fff" : color.bg,
+                }}
+              >
+                {marker.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Value display */}
       {showValue && (
         <div className="text-center text-5xl font-black text-foreground mt-2 mb-1">
@@ -374,56 +422,52 @@ export function GameSlider({
         </div>
       </div>
 
-      {/* Legend for result mode */}
-      {markers.length > 0 && (
-        <div className="mt-4 space-y-1.5">
-          {truthMarker && (
+      {showLegend && <ResultLegend markers={markers} />}
+    </div>
+  );
+}
+
+export function ResultLegend({ markers, revealRows = false, showTruth = true, className }: ResultLegendProps) {
+  const guessMarkers = markers.filter((marker) => !marker.isTruth);
+  // Keep round results readable by score even when slider markers reveal in a random order.
+  const displayMarkers = [
+    ...(showTruth ? markers.filter((marker) => marker.isTruth) : []),
+    ...[...guessMarkers].sort((a, b) => (b.points ?? 0) - (a.points ?? 0)),
+  ];
+
+  return (
+    <div className={cn("mt-4 space-y-1.5", className)}>
+      {displayMarkers.map((marker, index) => {
+        const color = marker.color ?? MARKER_COLORS[guessMarkers.indexOf(marker) % MARKER_COLORS.length];
+        const revealDelay = (displayMarkers.length - 1 - index) * 280;
+        return (
+          <div
+            key={`${marker.label}-${marker.value}`}
+            className={cn(
+              "flex items-center gap-2 text-sm",
+              revealRows && "animate-in fade-in slide-in-from-bottom-4 duration-500",
+              marker.isTruth && "border-b border-border pb-1.5 mb-1.5",
+              marker.highlight && "bg-yellow-300/10 ring-1 ring-yellow-300/40 rounded-md px-1.5 py-1 -mx-1.5",
+            )}
+            style={revealRows ? { animationDelay: `${revealDelay}ms`, animationFillMode: "both" } : undefined}
+          >
             <div
-              className="flex items-center gap-2 text-sm border-b border-border pb-1.5 mb-1.5 animate-in fade-in slide-in-from-left-2 duration-300"
-              style={{
-                animationDelay: `${truthMarker.delayMs ?? 0}ms`,
-                animationFillMode: "both",
-              }}
+              className={cn(
+                "w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black",
+                marker.isTruth && "bg-white text-black",
+                marker.highlight && "ring-2 ring-yellow-300",
+              )}
+              style={marker.isTruth ? undefined : { background: color.bg, color: color.text }}
             >
-              <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black bg-white text-black">
-                ★
-              </div>
-              <span className="font-bold text-foreground">{truthMarker.label}</span>
-              <span className="text-foreground ml-auto font-mono font-black text-sm">{truthMarker.value}</span>
+              {marker.isTruth ? "★" : marker.animal ?? marker.label.substring(0, 2).toUpperCase()}
             </div>
-          )}
-          {guessMarkers.map((marker, i) => {
-            const color = MARKER_COLORS[i % MARKER_COLORS.length];
-            return (
-              <div
-                key={i}
-                className={cn(
-                  "flex items-center gap-2 text-sm animate-in fade-in slide-in-from-left-2 duration-300",
-                  marker.highlight && "bg-yellow-300/10 ring-1 ring-yellow-300/40 rounded-md px-1.5 py-1 -mx-1.5",
-                )}
-                style={{
-                  animationDelay: `${marker.delayMs ?? 0}ms`,
-                  animationFillMode: "both",
-                }}
-              >
-                <div
-                  className={cn(
-                    "w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black",
-                    marker.highlight && "ring-2 ring-yellow-300",
-                  )}
-                  style={{ background: color.bg, color: color.text }}
-                >
-                  {marker.animal ?? marker.label.substring(0, 2).toUpperCase()}
-                </div>
-                <span className={cn("font-semibold text-foreground", marker.highlight && "text-yellow-200")}>
-                  {marker.label}
-                </span>
-                <span className="text-muted-foreground ml-auto font-mono text-xs">{marker.value}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+            <span className={cn(marker.isTruth ? "font-bold" : "font-semibold", "text-foreground", marker.highlight && "text-yellow-200")}>
+              {marker.label}
+            </span>
+            <span className="text-muted-foreground ml-auto font-mono text-xs">+{marker.points ?? 0}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -331,12 +331,13 @@ function computeRoundResults(room: Room): void {
   for (const player of room.players) {
     const currentPlayer = room.players[room.currentPlayerIndex];
     if (!currentPlayer || player.id === currentPlayer.id) continue;
+    if (room.timedOutGuessers.has(player.id)) continue;
 
-    const guess = room.guesses.get(player.id) ?? GAMEPLAY_CONFIG.DEFAULT_SLIDER_VALUE;
+    const guess = room.guesses.get(player.id);
+    if (guess === undefined) continue;
     const path = room.guessesPaths.get(player.id);
-    const timedOut = room.timedOutGuessers.has(player.id);
     const diff = Math.abs(guess - selfRating);
-    const points = timedOut ? 0 : Math.max(0, GAMEPLAY_CONFIG.MAX_POINTS_PER_ROUND - diff * GAMEPLAY_CONFIG.POINTS_PER_DIFF_UNIT);
+    const points = Math.max(0, GAMEPLAY_CONFIG.MAX_POINTS_PER_ROUND - diff * GAMEPLAY_CONFIG.POINTS_PER_DIFF_UNIT);
 
     player.score += points;
     results.push({

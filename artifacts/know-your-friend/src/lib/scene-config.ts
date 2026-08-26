@@ -13,20 +13,24 @@ export type SlotRenderer = "placeholder" | "image" | "lottie" | "video";
 export type LabelPlacement = "above" | "below";
 
 export const ANIMAL_OPTIONS = [
-  { id: "fox", emoji: "🦊", label: "Fox" },
-  { id: "raccoon", emoji: "🦝", label: "Raccoon" },
-  { id: "hedgehog", emoji: "🦔", label: "Hedgehog" },
-  { id: "deer", emoji: "🦌", label: "Deer" },
-  { id: "bear", emoji: "🐻", label: "Bear" },
-  { id: "wolf", emoji: "🐺", label: "Wolf" },
-  { id: "owl", emoji: "🦉", label: "Owl" },
-  { id: "squirrel", emoji: "🐿️", label: "Squirrel" },
+  { id: "fox", emoji: "🦊", label: "Fox", color: { bg: "#FF4B8B", text: "#fff" } },
+  { id: "raccoon", emoji: "🦝", label: "Raccoon", color: { bg: "#00C8E8", text: "#111" } },
+  { id: "hedgehog", emoji: "🦔", label: "Hedgehog", color: { bg: "#9B60FF", text: "#fff" } },
+  { id: "deer", emoji: "🦌", label: "Deer", color: { bg: "#2ECC71", text: "#111" } },
+  { id: "bear", emoji: "🐻", label: "Bear", color: { bg: "#FF6B35", text: "#fff" } },
+  { id: "wolf", emoji: "🐺", label: "Wolf", color: { bg: "#F4D35E", text: "#111" } },
+  { id: "owl", emoji: "🦉", label: "Owl", color: { bg: "#3A86FF", text: "#fff" } },
+  { id: "squirrel", emoji: "🐿️", label: "Squirrel", color: { bg: "#EF476F", text: "#fff" } },
 ] as const;
 
 export type AnimalId = (typeof ANIMAL_OPTIONS)[number]["id"];
 
 export function getAnimalEmoji(animal?: string): string | undefined {
   return ANIMAL_OPTIONS.find((option) => option.id === animal)?.emoji;
+}
+
+export function getAnimalColor(animal?: string): { bg: string; text: string } | undefined {
+  return ANIMAL_OPTIONS.find((option) => option.id === animal)?.color;
 }
 
 export type SlotConfig = {
