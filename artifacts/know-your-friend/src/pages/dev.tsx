@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { useI18n } from "@/lib/i18n";
 import type { GameRoomState } from "@/hooks/use-game-socket";
+import type { Player } from "@workspace/api-client-react";
 import { useDevGame } from "@/lib/dev-game-context";
 import { DEFAULT_DEV_CONFIG, type DevGameConfig } from "@/lib/dev-game-state";
 import { DEV_ROOM_CODE } from "@/lib/dev-game-state";
@@ -67,7 +68,7 @@ const SCREENS: { id: ScreenId; label: string; group: string }[] = [
 ];
 
 // ─── mock data ───────────────────────────────────────────────────────────────
-const MOCK_PLAYERS = [
+const MOCK_PLAYERS: Player[] = [
   { id: "p1", name: "Alice", animal: "fox", score: 47, isHost: true },
   { id: "p2", name: "Bob", animal: "raccoon", score: 31, isHost: false },
   { id: "p3", name: "Carol", animal: "hedgehog", score: 22, isHost: false },
