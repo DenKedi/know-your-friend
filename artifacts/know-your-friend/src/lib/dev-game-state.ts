@@ -43,6 +43,8 @@ export const DEFAULT_DEV_CONFIG: DevGameConfig = {
   language: "en",
 };
 
+const DEV_ANIMALS = ["fox", "raccoon", "hedgehog", "deer", "bear", "wolf", "owl", "squirrel"] as const;
+
 // ─── Mock categories ──────────────────────────────────────────────────────────
 
 const CATS_A = [
@@ -122,6 +124,7 @@ export function createInitialDevState(config: DevGameConfig): GameRoomState {
   const players = config.playerNames.map((name, i) => ({
     id: `p${i + 1}`,
     name,
+    animal: DEV_ANIMALS[i % DEV_ANIMALS.length],
     score: 0,
     isHost: i === 0,
   }));

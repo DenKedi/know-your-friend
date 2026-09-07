@@ -68,10 +68,10 @@ const SCREENS: { id: ScreenId; label: string; group: string }[] = [
 
 // ─── mock data ───────────────────────────────────────────────────────────────
 const MOCK_PLAYERS = [
-  { id: "p1", name: "Alice", score: 47, isHost: true },
-  { id: "p2", name: "Bob", score: 31, isHost: false },
-  { id: "p3", name: "Carol", score: 22, isHost: false },
-  { id: "p4", name: "Dave", score: 58, isHost: false },
+  { id: "p1", name: "Alice", animal: "fox", score: 47, isHost: true },
+  { id: "p2", name: "Bob", animal: "raccoon", score: 31, isHost: false },
+  { id: "p3", name: "Carol", animal: "hedgehog", score: 22, isHost: false },
+  { id: "p4", name: "Dave", animal: "deer", score: 58, isHost: false },
 ];
 
 const MOCK_CATEGORIES = [

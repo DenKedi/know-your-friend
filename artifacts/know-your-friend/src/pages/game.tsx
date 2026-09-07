@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { DEFAULT_SCENE, getAnimalColor, getAnimalEmoji } from "@/lib/scene-config";
+import { AnimalIcon } from "@/components/animal-icon";
+import { getAnimalColor } from "@/lib/scene-config";
 import { SoundToggle } from "@/components/sound-toggle";
 import { useSound } from "@/lib/sound";
 
@@ -194,7 +195,7 @@ export default function Game() {
   useEffect(() => {
     setResultPhase("slider");
     setLeaderboardSorted(false);
-    if (state?.status !== "round_results" || !state.roundResults?.length) return;
+    if (state?.status !== "round_results" || !state.roundResults) return;
 
     const n = state.roundResults.length;
     const truthDelay = REVEAL_GUESS_BASE + n * REVEAL_STEP;
@@ -297,7 +298,7 @@ export default function Game() {
           value: result.guess,
           label: result.playerName,
           points: result.points,
-          animal: getAnimalEmoji(state.players[playerIndex]?.animal) ?? DEFAULT_SCENE.slots[playerIndex]?.placeholder,
+          animal: state.players[playerIndex]?.animal,
           color: colorForPlayer(state.players[playerIndex]?.animal, playerIndex),
           delayMs: REVEAL_GUESS_BASE + rank * REVEAL_STEP,
           highlight: result.playerId === playerId,
@@ -621,7 +622,7 @@ export default function Game() {
                           )}
                           style={{ background: color.bg, color: color.text }}
                         >
-                          {getAnimalEmoji(state.players[originalIdx]?.animal) ?? r.playerName.substring(0, 2).toUpperCase()}
+                          <AnimalIcon animal={state.players[originalIdx]?.animal} label={r.playerName} />
                         </div>
                         <div className="min-w-0">
                           <div className={cn("font-bold text-base truncate", highlight && "text-yellow-200")}>
@@ -714,7 +715,7 @@ export default function Game() {
                     className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0"
                     style={{ background: color.bg, color: color.text }}
                   >
-                    {getAnimalEmoji(p.animal) ?? p.name.substring(0, 2).toUpperCase()}
+                    <AnimalIcon animal={p.animal} label={p.name} />
                   </div>
                   <div className="flex-1 min-w-0 font-bold truncate">
                     {p.name} {isMe && <span className="text-xs text-muted-foreground font-normal">({t("common.you")})</span>}

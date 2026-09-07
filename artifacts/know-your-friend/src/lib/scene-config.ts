@@ -1,3 +1,12 @@
+import foxImage from "@/assets/icons/Animals Design 1/Fox.webp";
+import raccoonImage from "@/assets/icons/Animals Design 1/Raccoon.webp";
+import hedgehogImage from "@/assets/icons/Animals Design 1/Hedgehog.webp";
+import deerImage from "@/assets/icons/Animals Design 1/Deer.webp";
+import bearImage from "@/assets/icons/Animals Design 1/Bear.webp";
+import wolfImage from "@/assets/icons/Animals Design 1/Wolf.webp";
+import owlImage from "@/assets/icons/Animals Design 1/Owl.webp";
+import squirrelImage from "@/assets/icons/Animals Design 1/Squirrel.webp";
+
 /**
  * Scene & slot configuration for the lobby waiting-room scene.
  *
@@ -13,20 +22,24 @@ export type SlotRenderer = "placeholder" | "image" | "lottie" | "video";
 export type LabelPlacement = "above" | "below";
 
 export const ANIMAL_OPTIONS = [
-  { id: "fox", emoji: "🦊", label: "Fox", color: { bg: "#FF4B8B", text: "#fff" } },
-  { id: "raccoon", emoji: "🦝", label: "Raccoon", color: { bg: "#00C8E8", text: "#111" } },
-  { id: "hedgehog", emoji: "🦔", label: "Hedgehog", color: { bg: "#9B60FF", text: "#fff" } },
-  { id: "deer", emoji: "🦌", label: "Deer", color: { bg: "#2ECC71", text: "#111" } },
-  { id: "bear", emoji: "🐻", label: "Bear", color: { bg: "#FF6B35", text: "#fff" } },
-  { id: "wolf", emoji: "🐺", label: "Wolf", color: { bg: "#F4D35E", text: "#111" } },
-  { id: "owl", emoji: "🦉", label: "Owl", color: { bg: "#3A86FF", text: "#fff" } },
-  { id: "squirrel", emoji: "🐿️", label: "Squirrel", color: { bg: "#EF476F", text: "#fff" } },
+  { id: "fox", emoji: "🦊", image: foxImage, label: "Fox", color: { bg: "#FF4B8B", text: "#fff" } },
+  { id: "raccoon", emoji: "🦝", image: raccoonImage, label: "Raccoon", color: { bg: "#00C8E8", text: "#111" } },
+  { id: "hedgehog", emoji: "🦔", image: hedgehogImage, label: "Hedgehog", color: { bg: "#9B60FF", text: "#fff" } },
+  { id: "deer", emoji: "🦌", image: deerImage, label: "Deer", color: { bg: "#2ECC71", text: "#111" } },
+  { id: "bear", emoji: "🐻", image: bearImage, label: "Bear", color: { bg: "#FF6B35", text: "#fff" } },
+  { id: "wolf", emoji: "🐺", image: wolfImage, label: "Wolf", color: { bg: "#F4D35E", text: "#111" } },
+  { id: "owl", emoji: "🦉", image: owlImage, label: "Owl", color: { bg: "#3A86FF", text: "#fff" } },
+  { id: "squirrel", emoji: "🐿️", image: squirrelImage, label: "Squirrel", color: { bg: "#EF476F", text: "#fff" } },
 ] as const;
 
 export type AnimalId = (typeof ANIMAL_OPTIONS)[number]["id"];
 
 export function getAnimalEmoji(animal?: string): string | undefined {
   return ANIMAL_OPTIONS.find((option) => option.id === animal)?.emoji;
+}
+
+export function getAnimalImage(animal?: string): string | undefined {
+  return ANIMAL_OPTIONS.find((option) => option.id === animal)?.image;
 }
 
 export function getAnimalColor(animal?: string): { bg: string; text: string } | undefined {
@@ -68,20 +81,20 @@ export const DEFAULT_SCENE: SceneConfig = {
   capacity: 8,
   slots: [
     { id: "s1", x: 28, y: 78, scale: 1.0, facing: "right", placeholder: "🦊",
-      labelAnchor: { x: 28, y: 90, placement: "below" } },
+      labelAnchor: { x: 28, y: 78, placement: "below" } },
     { id: "s2", x: 72, y: 78, scale: 1.0, facing: "left", placeholder: "🦝",
-      labelAnchor: { x: 72, y: 90, placement: "below" } },
+      labelAnchor: { x: 72, y: 78, placement: "below" } },
     { id: "s3", x: 14, y: 66, scale: 0.95, facing: "right", placeholder: "🦔",
-      labelAnchor: { x: 14, y: 56, placement: "above" } },
+      labelAnchor: { x: 14, y: 66, placement: "above" } },
     { id: "s4", x: 86, y: 66, scale: 0.95, facing: "left", placeholder: "🦌",
-      labelAnchor: { x: 86, y: 56, placement: "above" } },
+      labelAnchor: { x: 86, y: 66, placement: "above" } },
     { id: "s5", x: 36, y: 50, scale: 0.85, facing: "right", placeholder: "🐻",
-      labelAnchor: { x: 36, y: 40, placement: "above" } },
+      labelAnchor: { x: 36, y: 50, placement: "above" } },
     { id: "s6", x: 64, y: 50, scale: 0.85, facing: "left", placeholder: "🐺",
-      labelAnchor: { x: 64, y: 40, placement: "above" } },
+      labelAnchor: { x: 64, y: 50, placement: "above" } },
     { id: "s7", x: 50, y: 38, scale: 0.75, facing: "right", placeholder: "🦉",
-      labelAnchor: { x: 50, y: 28, placement: "above" } },
+      labelAnchor: { x: 50, y: 38, placement: "above" } },
     { id: "s8", x: 50, y: 86, scale: 1.05, facing: "right", placeholder: "🐿️",
-      labelAnchor: { x: 50, y: 96, placement: "below" } },
+      labelAnchor: { x: 50, y: 86, placement: "below" } },
   ],
 };

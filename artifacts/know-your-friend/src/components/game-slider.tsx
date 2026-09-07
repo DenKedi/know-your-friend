@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { AnimalIcon } from "@/components/animal-icon";
 import { cn } from "@/lib/utils";
 
 export interface SliderMarker {
@@ -8,7 +9,7 @@ export interface SliderMarker {
   /** Points earned for this guess in the current round. */
   points?: number;
   isTruth?: boolean;
-  /** Animal emoji from the player's scene slot. Falls back to initials if absent. */
+  /** Animal ID from the player's scene slot. Falls back to initials if absent. */
   animal?: string;
   /** ms to delay this marker's reveal animation (slider circle, tick, legend row). */
   delayMs?: number;
@@ -284,7 +285,7 @@ export function GameSlider({
                   className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shadow-lg border-2 border-white/20"
                   style={{ background: color.bg, color: color.text }}
                 >
-                  {marker.animal ?? marker.label.substring(0, 2).toUpperCase()}
+                  <AnimalIcon animal={marker.animal} label={marker.label} />
                 </div>
                 <div className="w-0.5 h-3 bg-white/40 mt-0.5" />
               </div>
@@ -459,7 +460,7 @@ export function ResultLegend({ markers, revealRows = false, showTruth = true, cl
               )}
               style={marker.isTruth ? undefined : { background: color.bg, color: color.text }}
             >
-              {marker.isTruth ? "★" : marker.animal ?? marker.label.substring(0, 2).toUpperCase()}
+              {marker.isTruth ? "★" : <AnimalIcon animal={marker.animal} label={marker.label} />}
             </div>
             <span className={cn(marker.isTruth ? "font-bold" : "font-semibold", "text-foreground", marker.highlight && "text-yellow-200")}>
               {marker.label}

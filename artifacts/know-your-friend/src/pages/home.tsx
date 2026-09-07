@@ -17,6 +17,7 @@ import { Flag } from "@/components/flag";
 import fireIcon from "@/assets/icons/Fire_1.png";
 import { SoundToggle } from "@/components/sound-toggle";
 import { ANIMAL_OPTIONS, type AnimalId } from "@/lib/scene-config";
+import { AnimalIcon } from "@/components/animal-icon";
 
 export default function Home() {
   const [, setLocation] = useLocation();
@@ -335,7 +336,9 @@ export default function Home() {
                           : "border-white/15 bg-white/[0.05] hover:-translate-y-0.5 hover:border-primary/50 hover:bg-white/[0.1]"
                     }`}
                   >
-                    <span aria-hidden>{option.emoji}</span>
+                    <span className="h-14 w-14" aria-hidden>
+                      <AnimalIcon animal={option.id} label={option.label} />
+                    </span>
                   </button>
                 );
               })}

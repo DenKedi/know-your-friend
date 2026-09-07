@@ -2,7 +2,6 @@ import { DEFAULT_SCENE } from "@/lib/scene-config";
 import { usePlayerSlots } from "@/hooks/use-player-slots";
 import { usePlayerJoinEvents } from "@/hooks/use-player-join-events";
 import { AnimalCharacter } from "./animal-character";
-import { NameLabel } from "./name-label";
 
 type Player = { id: string; name: string; animal?: string; isHost: boolean };
 
@@ -24,17 +23,14 @@ export function LobbyCharacterLayer({ players }: Props) {
       {assignments.map(({ slot, player }) => {
         const isEntering = enteringIds.has(player.id);
         return (
-          <div key={player.id}>
-            <AnimalCharacter slot={slot} animal={player.animal} isEntering={isEntering} />
-            <NameLabel
-              name={player.name}
-              isHost={player.isHost}
-              x={slot.labelAnchor.x}
-              y={slot.labelAnchor.y}
-              placement={slot.labelAnchor.placement}
-              delayMs={isEntering ? 250 : 0}
-            />
-          </div>
+          <AnimalCharacter
+            key={player.id}
+            slot={slot}
+            animal={player.animal}
+            name={player.name}
+            isHost={player.isHost}
+            isEntering={isEntering}
+          />
         );
       })}
     </div>
