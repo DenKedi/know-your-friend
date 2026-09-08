@@ -3,12 +3,18 @@ import { useGameSocket } from "@/hooks/use-game-socket";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
+import { AnimalIcon } from "@/components/animal-icon";
 
-const PLACE_RING = [
-  "ring-2 ring-primary/70",
-  "ring-2 ring-white/40",
-  "ring-1 ring-white/20",
-];
+const RESULTS_GRADIENT_START = [239, 214, 42];
+const RESULTS_GRADIENT_END = [255, 125, 6];
+
+function colorForRank(rank: number, playerCount: number) {
+  const progress = playerCount <= 1 ? 0 : rank / (playerCount - 1);
+  const channels = RESULTS_GRADIENT_START.map((start, index) =>
+    Math.round(start + (RESULTS_GRADIENT_END[index]! - start) * progress),
+  );
+  return `rgb(${channels.join(", ")})`;
+}
 
 export default function Results() {
   const [match, params] = useRoute("/room/:code/results");
@@ -56,7 +62,7 @@ export default function Results() {
         <div className="divide-y divide-white/10">
           {showScores &&
             sortedPlayers.map((p, i) => {
-              const ring = PLACE_RING[i] ?? "";
+              const rankColor = colorForRank(i, sortedPlayers.length);
               return (
                 <div
                   key={p.id}
@@ -64,19 +70,24 @@ export default function Results() {
                   style={{ animationDelay: `${i * 150}ms`, animationFillMode: "both" }}
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <div
-                      className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-black text-base bg-white/10 ${ring}`}
-                    >
-                      {i + 1}
+                    <div className="w-8 flex-shrink-0 text-center">
+                      <div className="font-black text-2xl tabular-nums" style={{ color: rankColor }}>
+                        {i + 1}
+                      </div>
+                      {i === 0 && (
+                        <div className="text-[9px] leading-none font-black uppercase tracking-normal" style={{ color: rankColor }}>
+                          {t("results.winner")}
+                        </div>
+                      )}
                     </div>
-                    <span className="font-bold text-xl truncate">{p.name}</span>
-                    {i === 0 && (
-                      <span className="text-xs font-black text-primary uppercase tracking-wider flex-shrink-0">
-                        {t("results.winner")}
-                      </span>
-                    )}
+                    <div
+                      className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden ring-2 ring-white/25"
+                    >
+                      <AnimalIcon animal={p.animal} label={p.name} />
+                    </div>
+                    <span className="font-bold text-xl truncate" style={{ color: rankColor }}>{p.name}</span>
                   </div>
-                  <div className="text-3xl font-black text-primary tabular-nums flex-shrink-0 ml-2">
+                  <div className="text-3xl font-black tabular-nums flex-shrink-0 ml-2" style={{ color: rankColor }}>
                     {p.score}
                   </div>
                 </div>
