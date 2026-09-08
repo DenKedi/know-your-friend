@@ -301,6 +301,11 @@ components:
           type: integer
         points:
           type: integer
+          description: Total round points, including bonusPoints.
+        bonusPoints:
+          type: integer
+          minimum: 0
+          description: Perfect-guess bonus already included in points; zero for non-perfect guesses.
         path:
           type: array
           description: Recorded slider extrema (direction-reversal points) from the guesser's drag, in chronological order. Always starts with the initial value and ends with the submitted guess. Empty if the guesser did not drag.

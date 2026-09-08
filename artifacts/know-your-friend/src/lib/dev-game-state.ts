@@ -71,6 +71,15 @@ function randomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// Mirrors the server gameplay configuration; scoring parity is covered by tests.
+const PERFECT_GUESS_BONUS_POINTS = 50;
+
+function scoreGuess(guess: number, selfRating: number) {
+  const diff = Math.abs(guess - selfRating);
+  const bonusPoints = diff === 0 ? PERFECT_GUESS_BONUS_POINTS : 0;
+  return { diff, bonusPoints, points: Math.max(0, 100 - diff * 2) + bonusPoints };
+}
+
 // Stash for the current round's self-rating path so we can echo it into round_results.
 let devSelfRatingPath: number[] = [];
 
@@ -88,8 +97,6 @@ function computeResults(
       p.id === realGuesserId
         ? realGuess
         : randomInt(Math.max(0, selfRating - 35), Math.min(100, selfRating + 35));
-    const diff = Math.abs(guess - selfRating);
-    const points = Math.max(0, 100 - diff * 2);
     // Synthesize a believable drag path for mock players so the result animation has variety.
     const path =
       p.id === realGuesserId
@@ -100,8 +107,7 @@ function computeResults(
       playerName: p.name,
       guess,
       selfRating,
-      diff,
-      points,
+      ...scoreGuess(guess, selfRating),
       path,
       selfRatingPath,
     };
@@ -116,6 +122,60 @@ function awardPoints(
     const r = results.find((r) => r.playerId === p.id);
     return r ? { ...p, score: p.score + r.points } : p;
   });
+}
+
+/** Remove the current result's points before replacing its preview. */
+function playersBeforeResults(state: GameRoomState): GameRoomState["players"] {
+  if (state.status !== "round_results" && state.status !== "game_over") return state.players;
+  return state.players.map((player) => ({
+    ...player,
+    score: player.score - (state.roundResults?.find((result) => result.playerId === player.id)?.points ?? 0),
+  }));
+}
+
+/** Deterministic result preview; count is clamped to the number of guessers. */
+export function createPerfectGuessPreview(state: GameRoomState, count = 1): GameRoomState {
+  const currentPlayerId = state.players.find((player) => player.id === state.currentPlayerId)?.id
+    ?? state.players[0]?.id
+    ?? null;
+  const selfRating = state.selfRating ?? 65;
+  const guessers = state.players.filter((player) => player.id !== currentPlayerId);
+  const perfectCount = Math.max(0, Math.min(guessers.length, Math.floor(count) || 0));
+  const selfRatingPath = [30, 70, 50, selfRating];
+  const results: GuessResult[] = guessers.map((player, index) => {
+    const guess = index < perfectCount
+      ? selfRating
+      : Math.max(0, Math.min(100, selfRating + (selfRating >= 50 ? -1 : 1) * (10 + index * 5)));
+    return {
+      playerId: player.id,
+      playerName: player.name,
+      guess,
+      selfRating,
+      ...scoreGuess(guess, selfRating),
+      path: [guess > 50 ? 20 : 80, guess > 50 ? 70 : 30, guess > 50 ? 40 : 60, guess],
+      selfRatingPath,
+    };
+  });
+  const category = CATS_A[0]!;
+  const currentPlayerIndex = state.players.findIndex((player) => player.id === currentPlayerId);
+  return {
+    ...state,
+    status: "round_results",
+    currentPlayerId,
+    nextPlayerId: state.players[(currentPlayerIndex + 1) % state.players.length]?.id ?? null,
+    currentCategory: state.currentCategory ?? category.id,
+    currentCategoryLabel: state.currentCategoryLabel ?? category.label,
+    currentCategoryLeftLabel: state.currentCategoryLeftLabel ?? category.leftLabel,
+    currentCategoryRightLabel: state.currentCategoryRightLabel ?? category.rightLabel,
+    selfRating,
+    roundResults: results,
+    players: awardPoints(playersBeforeResults(state), results),
+    guessesSubmitted: guessers.length,
+    guessesTotal: guessers.length,
+    guessedPlayerIds: guessers.map((player) => player.id),
+    pendingGuesserIds: [],
+    phaseDeadline: null,
+  };
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -274,6 +334,7 @@ export function jumpToPhase(
         guessesSubmitted: state.players.length - 1,
         guessesTotal: state.players.length - 1,
         roundResults: results,
+        players: awardPoints(playersBeforeResults(state), results),
         guessedPlayerIds: state.players.slice(1).map((p) => p.id),
       };
     }

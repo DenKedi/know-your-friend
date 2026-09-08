@@ -69,6 +69,8 @@ export const GetRoomParams = zod.object({
   roomCode: zod.coerce.string(),
 });
 
+export const getRoomResponseRoundResultsItemBonusPointsMin = 0;
+
 export const GetRoomResponse = zod.object({
   roomCode: zod.string(),
   language: zod.enum(["en", "de", "fr", "es", "it", "ru"]),
@@ -119,7 +121,16 @@ export const GetRoomResponse = zod.object({
         guess: zod.number(),
         selfRating: zod.number(),
         diff: zod.number(),
-        points: zod.number(),
+        points: zod
+          .number()
+          .describe("Total round points, including bonusPoints."),
+        bonusPoints: zod
+          .number()
+          .min(getRoomResponseRoundResultsItemBonusPointsMin)
+          .optional()
+          .describe(
+            "Perfect-guess bonus already included in points; zero for non-perfect guesses.",
+          ),
         path: zod
           .array(zod.number())
           .optional()

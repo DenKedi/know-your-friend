@@ -27,7 +27,10 @@ export interface GuessResult {
   guess: number;
   selfRating: number;
   diff: number;
+  /** Total round points, including bonusPoints. */
   points: number;
+  /** Perfect-guess bonus already included in points; zero for non-perfect guesses. */
+  bonusPoints?: number;
   /** Recorded slider extrema from the guesser's drag; first entry = start value, last = submitted guess. */
   path?: number[];
   /** Recorded slider extrema from the current player's self-rating drag (same on every entry of a round). */
@@ -337,7 +340,8 @@ function computeRoundResults(room: Room): void {
     if (guess === undefined) continue;
     const path = room.guessesPaths.get(player.id);
     const diff = Math.abs(guess - selfRating);
-    const points = Math.max(0, GAMEPLAY_CONFIG.MAX_POINTS_PER_ROUND - diff * GAMEPLAY_CONFIG.POINTS_PER_DIFF_UNIT);
+    const bonusPoints = diff === 0 ? GAMEPLAY_CONFIG.PERFECT_GUESS_BONUS_POINTS : 0;
+    const points = Math.max(0, GAMEPLAY_CONFIG.MAX_POINTS_PER_ROUND - diff * GAMEPLAY_CONFIG.POINTS_PER_DIFF_UNIT) + bonusPoints;
 
     player.score += points;
     results.push({
@@ -347,6 +351,7 @@ function computeRoundResults(room: Room): void {
       selfRating,
       diff,
       points,
+      bonusPoints,
       path,
       selfRatingPath,
     });

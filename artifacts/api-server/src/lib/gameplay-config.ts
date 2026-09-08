@@ -27,10 +27,12 @@ export interface GameplayConfig {
   CATEGORIES_PER_TURN: number;
 
   // ── Scoring ────────────────────────────────────────────────────────────
-  /** Maximum points awarded for a perfect guess (diff = 0). */
+  /** Maximum base points awarded before a perfect-guess bonus. */
   MAX_POINTS_PER_ROUND: number;
   /** Points deducted per absolute unit of distance from the truth. */
   POINTS_PER_DIFF_UNIT: number;
+  /** Additional points awarded only when a submitted guess exactly matches the truth. */
+  PERFECT_GUESS_BONUS_POINTS: number;
 
   // ── Slider defaults ────────────────────────────────────────────────────
   /** Value that is automatically submitted when a phase timer expires. */
@@ -49,6 +51,7 @@ export const GAMEPLAY_CONFIG: GameplayConfig = {
 
   MAX_POINTS_PER_ROUND: 100,
   POINTS_PER_DIFF_UNIT: 2,
+  PERFECT_GUESS_BONUS_POINTS: 50,
 
   DEFAULT_SLIDER_VALUE: 50,
 };

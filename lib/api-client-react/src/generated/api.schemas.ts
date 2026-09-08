@@ -82,7 +82,13 @@ export interface GuessResult {
   guess: number;
   selfRating: number;
   diff: number;
+  /** Total round points, including bonusPoints. */
   points: number;
+  /**
+   * Perfect-guess bonus already included in points; zero for non-perfect guesses.
+   * @minimum 0
+   */
+  bonusPoints?: number;
   /** Recorded slider extrema (direction-reversal points) from the guesser's drag, in chronological order. Always starts with the initial value and ends with the submitted guess. Empty if the guesser did not drag. */
   path?: number[];
   /** Same as `path`, but for the current player's self-rating drag. */

@@ -1,19 +1,23 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AnimalIcon } from "@/components/animal-icon";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 export interface SliderMarker {
+  playerId?: string;
   value: number;
   label: string;
   color?: { bg: string; text: string };
   /** Points earned for this guess in the current round. */
   points?: number;
+  bonusPoints?: number;
+  isPerfect?: boolean;
   isTruth?: boolean;
   /** Animal ID from the player's scene slot. Falls back to initials if absent. */
   animal?: string;
   /** ms to delay this marker's reveal animation (slider circle, tick, legend row). */
   delayMs?: number;
-  /** Special highlight for the winning guess. */
+  /** Highlights the viewing player's own guess. */
   highlight?: boolean;
   /**
    * Recorded slider extrema (first = touch-down value, last = submitted value).
@@ -26,6 +30,8 @@ export interface SliderMarker {
   pathDurationMs?: number;
 }
 
+export type TruthRevealOrigin = { x: number; y: number };
+
 interface GameSliderProps {
   value?: number;
   onChange?: (value: number) => void;
@@ -37,6 +43,8 @@ interface GameSliderProps {
   markers?: SliderMarker[];
   showLegend?: boolean;
   showValue?: boolean;
+  /** Fires once, after the truth circle has rendered at its final position. */
+  onTruthSettled?: (origin: TruthRevealOrigin) => void;
 }
 
 interface ResultLegendProps {
@@ -129,7 +137,7 @@ function pathPositionAt(path: number[], duration: number, elapsed: number): numb
 function useMarkerPosition(markers: readonly SliderMarker[]) {
   // Signature: re-arm the timeline whenever the round's markers change.
   const sig = markers
-    .map((m) => `${m.value}|${m.delayMs ?? 0}|${(m.path ?? []).join(",")}`)
+    .map((m) => `${m.playerId ?? m.label}|${m.value}|${m.isTruth}|${m.pathDurationMs ?? 0}|${m.delayMs ?? 0}|${(m.path ?? []).join(",")}`)
     .join(";");
   const startRef = useRef<number>(0);
   const [now, setNow] = useState(0);
@@ -157,11 +165,12 @@ function useMarkerPosition(markers: readonly SliderMarker[]) {
   return (m: SliderMarker) => {
     const { path, duration } = buildEffectivePath(m);
     const delay = m.delayMs ?? 0;
-    if (now < delay) return { value: path[0] ?? m.value, opacity: 0 };
+    if (now < delay) return { value: path[0] ?? m.value, opacity: 0, settled: false };
     const local = now - delay;
     return {
       value: pathPositionAt(path, duration, local),
       opacity: Math.min(1, local / FADE_IN_MS),
+      settled: local >= duration,
     };
   };
 }
@@ -177,8 +186,11 @@ export function GameSlider({
   markers = [],
   showLegend = true,
   showValue = false,
+  onTruthSettled,
 }: GameSliderProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const truthCircleRef = useRef<HTMLDivElement>(null);
+  const truthReportedRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   // Path recording: extrema accumulated during the current drag session.
@@ -250,6 +262,14 @@ export function GameSlider({
   const guessMarkers = markers.filter((m) => !m.isTruth);
   const truthMarker = markers.find((m) => m.isTruth);
   const getAnimatedPos = useMarkerPosition(markers);
+  const truthSettled = truthMarker ? getAnimatedPos(truthMarker).settled : false;
+
+  useEffect(() => {
+    if (!truthSettled || truthReportedRef.current || !truthCircleRef.current || !onTruthSettled) return;
+    truthReportedRef.current = true;
+    const rect = truthCircleRef.current.getBoundingClientRect();
+    onTruthSettled({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+  }, [truthSettled, onTruthSettled]);
   const labelRows = new Map<SliderMarker, number>();
   [...markers]
     .sort((a, b) => a.value - b.value)
@@ -302,7 +322,7 @@ export function GameSlider({
                   transition: "none",
                 }}
               >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shadow-lg border-2 border-white/30 bg-white text-black">
+                <div ref={truthCircleRef} data-testid="truth-circle" data-settled={truthSettled} className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black shadow-lg border-2 border-white/30 bg-white text-black">
                   ★
                 </div>
                 <div className="w-0.5 h-3 bg-white/70 mt-0.5" />
@@ -382,7 +402,7 @@ export function GameSlider({
 
       {/* Marker names below the slider bar */}
       {markers.length > 0 && (
-        <div className="relative h-12 px-[6%]">
+        <div className="relative min-h-12 px-[6%]" style={{ height: Math.max(48, labelRows.size ? (Math.max(...labelRows.values()) + 1) * 18 : 48) }}>
           {markers.map((marker, index) => {
             const { value: animValue, opacity } = getAnimatedPos(marker);
             const labelRow = labelRows.get(marker) ?? 0;
@@ -429,6 +449,7 @@ export function GameSlider({
 }
 
 export function ResultLegend({ markers, revealRows = false, showTruth = true, className }: ResultLegendProps) {
+  const { t } = useI18n();
   const guessMarkers = markers.filter((marker) => !marker.isTruth);
   // Keep round results readable by score even when slider markers reveal in a random order.
   const displayMarkers = [
@@ -449,6 +470,7 @@ export function ResultLegend({ markers, revealRows = false, showTruth = true, cl
               revealRows && "animate-in fade-in slide-in-from-bottom-4 duration-500",
               marker.isTruth && "border-b border-border pb-1.5 mb-1.5",
               marker.highlight && "bg-yellow-300/10 ring-1 ring-yellow-300/40 rounded-md px-1.5 py-1 -mx-1.5",
+              marker.isPerfect && "rounded-md bg-amber-300/10 px-1.5 py-1 ring-1 ring-amber-200/40",
             )}
             style={revealRows ? { animationDelay: `${revealDelay}ms`, animationFillMode: "both" } : undefined}
           >
@@ -462,10 +484,16 @@ export function ResultLegend({ markers, revealRows = false, showTruth = true, cl
             >
               {marker.isTruth ? "★" : <AnimalIcon animal={marker.animal} label={marker.label} />}
             </div>
-            <span className={cn(marker.isTruth ? "font-bold" : "font-semibold", "text-foreground", marker.highlight && "text-yellow-200")}>
-              {marker.label}
+            <div className="min-w-0 flex-1">
+              <span className={cn("block truncate", marker.isTruth ? "font-bold" : "font-semibold", "text-foreground", marker.highlight && "text-yellow-200")}>
+                {marker.label}
+              </span>
+              {marker.isPerfect && <span className="block text-xs font-bold text-amber-200">★ {t("game.perfectGuess")}</span>}
+            </div>
+            <span className="ml-auto shrink-0 text-right font-mono text-xs">
+              <span className={cn("block", marker.isPerfect ? "font-black text-amber-200" : "text-muted-foreground")}>+{marker.points ?? 0}</span>
+              {!!marker.bonusPoints && <span className="block text-[10px] text-amber-200/80">{t("game.perfectBonus", { points: marker.bonusPoints })}</span>}
             </span>
-            <span className="text-muted-foreground ml-auto font-mono text-xs">+{marker.points ?? 0}</span>
           </div>
         );
       })}
