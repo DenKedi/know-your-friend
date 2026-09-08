@@ -18,6 +18,7 @@ import {
   createInitialDevState,
   applyDevAction,
   jumpToPhase,
+  createPerfectGuessPreview,
   type DevGameConfig,
   type GameRoomState,
   type OutgoingMessage,
@@ -38,6 +39,7 @@ interface DevGameContextValue {
   send: (message: OutgoingMessage) => void;
   /** Directly warp state to the given phase (bypasses state machine). */
   jumpTo: (phase: GameRoomState["status"]) => void;
+  previewPerfectGuesses: (count: number) => void;
   /** Switch whose perspective is shown; re-writes kyf_id_DEV1 in sessionStorage. */
   setViewingAs: (playerId: string) => void;
 }
@@ -49,6 +51,7 @@ type Action =
   | { type: "STOP" }
   | { type: "SEND"; message: OutgoingMessage; viewingAsId: string }
   | { type: "JUMP"; phase: GameRoomState["status"] }
+  | { type: "PREVIEW_PERFECT"; count: number }
   | { type: "SET_VIEWING_AS"; playerId: string };
 
 interface DevGameInternalState {
@@ -86,6 +89,9 @@ function reducer(state: DevGameInternalState, action: Action): DevGameInternalSt
     case "JUMP":
       if (!state.devState) return state;
       return { ...state, devState: jumpToPhase(state.devState, action.phase) };
+    case "PREVIEW_PERFECT":
+      if (!state.devState) return state;
+      return { ...state, devState: createPerfectGuessPreview(state.devState, action.count) };
     case "SET_VIEWING_AS":
       return { ...state, viewingAsId: action.playerId };
     default:
@@ -104,6 +110,7 @@ const DevGameContext = createContext<DevGameContextValue>({
   stopDevMode: () => {},
   send: () => {},
   jumpTo: () => {},
+  previewPerfectGuesses: () => {},
   setViewingAs: () => {},
 });
 
@@ -153,6 +160,10 @@ export function DevGameProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_VIEWING_AS", playerId });
   }, []);
 
+  const previewPerfectGuesses = useCallback((count: number) => {
+    dispatch({ type: "PREVIEW_PERFECT", count });
+  }, []);
+
   return (
     <DevGameContext.Provider
       value={{
@@ -164,6 +175,7 @@ export function DevGameProvider({ children }: { children: ReactNode }) {
         stopDevMode,
         send,
         jumpTo,
+        previewPerfectGuesses,
         setViewingAs,
       }}
     >

@@ -7,6 +7,7 @@ import { useDevGame, DEV_ROOM_CODE } from "@/lib/dev-game-context";
 import type { LanguageCode } from "@/lib/i18n";
 
 export type GameRoomState = RoomState & {
+  resultPreviewRevision?: number;
   nextPlayerId?: string | null;
   rerollUsedThisTurn?: boolean;
   pendingGuesserIds?: string[];

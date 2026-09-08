@@ -55,7 +55,7 @@ function getNextPhaseAction(
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DevToolbar() {
-  const { isDevMode, devState, send, jumpTo, stopDevMode, setViewingAs, viewingAsId } =
+  const { isDevMode, devState, send, jumpTo, previewPerfectGuesses, stopDevMode, setViewingAs, viewingAsId } =
     useDevGame();
   const [, navigate] = useLocation();
   const [expanded, setExpanded] = useState(true);
@@ -184,6 +184,25 @@ export function DevToolbar() {
           </div>
 
           {/* Reset */}
+          <label className="flex items-center gap-1 text-zinc-400">
+            Perfect guesses
+            <select
+              aria-label="Preview perfect guesses"
+              value=""
+              onChange={(event) => {
+                previewPerfectGuesses(Number(event.target.value));
+                navigate(`/room/${DEV_ROOM_CODE}/game`);
+              }}
+              className="rounded border border-zinc-600 bg-zinc-800 px-2 py-1 text-zinc-200"
+            >
+              <option value="" disabled>Replay…</option>
+              <option value="0">None</option>
+              <option value="1">One</option>
+              <option value="2">Two</option>
+              <option value={devState.players.length - 1}>Everyone</option>
+            </select>
+          </label>
+
           <button
             onClick={handleReset}
             className="ml-auto bg-rose-900/60 hover:bg-rose-800/70 border border-rose-700/50 text-rose-300 px-2.5 py-1 rounded font-bold transition-colors shrink-0"

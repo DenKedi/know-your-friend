@@ -9,6 +9,7 @@ import type { RoomState, GuessResult } from "@workspace/api-client-react";
 // ─── Shared type mirrors (avoids circular import with use-game-socket) ────────
 
 export type GameRoomState = RoomState & {
+  resultPreviewRevision?: number;
   nextPlayerId?: string | null;
   rerollUsedThisTurn?: boolean;
   pendingGuesserIds?: string[];
@@ -161,6 +162,7 @@ export function createPerfectGuessPreview(state: GameRoomState, count = 1): Game
   return {
     ...state,
     status: "round_results",
+    resultPreviewRevision: (state.resultPreviewRevision ?? 0) + 1,
     currentPlayerId,
     nextPlayerId: state.players[(currentPlayerIndex + 1) % state.players.length]?.id ?? null,
     currentCategory: state.currentCategory ?? category.id,

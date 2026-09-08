@@ -4,7 +4,8 @@ import { useRoute, useLocation } from "wouter";
 import woodTexture from "@/assets/images/Wood-texture.png";
 import { useGameSocket } from "@/hooks/use-game-socket";
 import { Button } from "@/components/ui/button";
-import { GameSlider, ResultLegend, type SliderMarker } from "@/components/game-slider";
+import { GameSlider, ResultLegend, type SliderMarker, type TruthRevealOrigin } from "@/components/game-slider";
+import { PerfectGuessCelebration } from "@/components/perfect-guess-celebration";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -48,7 +49,7 @@ const MARKER_COLORS = [
   { bg: "#FF6B35", text: "#fff" },
 ];
 
-// Reveal animation timing (must match the IIFE inside round_results)
+// Marker playback timing; subsequent stages begin when the truth actually settles.
 const REVEAL_PATH_DURATION = 3000;
 const STAR_REVEAL_PATH_DURATION = 5000;
 const REVEAL_GUESS_BASE = 200;
@@ -62,7 +63,7 @@ const ROUND_RESULT_ROW_STEP = 280;
 const ROUND_RESULTS_HOLD_MS = 1400;
 const NEXT_TURN_READY_DELAY_MS = 1000;
 
-type ResultPhase = "slider" | "slider_exit" | "round_results" | "round_results_exit" | "leaderboard";
+type ResultPhase = "slider" | "slider_hold" | "perfect_guess" | "slider_exit" | "round_results" | "round_results_exit" | "leaderboard";
 
 function colorForIndex(i: number) {
   return MARKER_COLORS[i % MARKER_COLORS.length]!;
@@ -193,6 +194,8 @@ export default function Game() {
   const [resultPhase, setResultPhase] = useState<ResultPhase>("slider");
   const [leaderboardSorted, setLeaderboardSorted] = useState(false);
   const [isNextTurnReady, setIsNextTurnReady] = useState(false);
+  const [truthOrigin, setTruthOrigin] = useState<TruthRevealOrigin | null>(null);
+  const resultRoundKey = `${roomCode}:${state?.currentRound}:${state?.currentPlayerId}:${state?.resultPreviewRevision ?? 0}`;
 
   useEffect(() => {
     if (!leaderboardSorted) {
@@ -207,36 +210,34 @@ export default function Game() {
   useEffect(() => {
     setResultPhase("slider");
     setLeaderboardSorted(false);
+    setIsNextTurnReady(false);
+    setTruthOrigin(null);
+  }, [state?.status, resultRoundKey]);
+
+  useEffect(() => {
     if (state?.status !== "round_results" || !state.roundResults) return;
-
     const n = state.roundResults.length;
-    const truthDelay = REVEAL_GUESS_BASE + n * REVEAL_STEP;
-    const sliderRevealMs = truthDelay + STAR_REVEAL_PATH_DURATION + 450;
     const roundResultsMs = (n + 1) * ROUND_RESULT_ROW_STEP + ROUND_RESULTS_HOLD_MS;
-    const sliderExit = setTimeout(() => setResultPhase("slider_exit"), sliderRevealMs);
-    const roundResults = setTimeout(() => setResultPhase("round_results"), sliderRevealMs + STAGE_TRANSITION_MS);
-    const roundResultsExit = setTimeout(
-      () => setResultPhase("round_results_exit"),
-      sliderRevealMs + STAGE_TRANSITION_MS + roundResultsMs,
-    );
-    const leaderboard = setTimeout(
-      () => setResultPhase("leaderboard"),
-      sliderRevealMs + STAGE_TRANSITION_MS * 2 + roundResultsMs,
-    );
-    const lastScoreCalculationMs = SCORE_CALCULATION_DELAY + SCORE_BADGE_LEAD_IN + REVEAL_COUNT_DURATION;
-    const sortLeaderboard = setTimeout(
-      () => setLeaderboardSorted(true),
-      sliderRevealMs + STAGE_TRANSITION_MS * 2 + roundResultsMs + lastScoreCalculationMs + LEADERBOARD_RESHUFFLE_BUFFER,
-    );
-
-    return () => {
-      clearTimeout(sliderExit);
-      clearTimeout(roundResults);
-      clearTimeout(roundResultsExit);
-      clearTimeout(leaderboard);
-      clearTimeout(sortLeaderboard);
-    };
-  }, [state?.status, state?.currentRound]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    switch (resultPhase) {
+      case "slider_hold":
+        timer = setTimeout(() => setResultPhase("slider_exit"), 450);
+        break;
+      case "slider_exit":
+        timer = setTimeout(() => setResultPhase("round_results"), STAGE_TRANSITION_MS);
+        break;
+      case "round_results":
+        timer = setTimeout(() => setResultPhase("round_results_exit"), roundResultsMs);
+        break;
+      case "round_results_exit":
+        timer = setTimeout(() => setResultPhase("leaderboard"), STAGE_TRANSITION_MS);
+        break;
+      case "leaderboard":
+        timer = setTimeout(() => setLeaderboardSorted(true), SCORE_CALCULATION_DELAY + SCORE_BADGE_LEAD_IN + REVEAL_COUNT_DURATION + LEADERBOARD_RESHUFFLE_BUFFER);
+        break;
+    }
+    return () => clearTimeout(timer);
+  }, [state?.status, state?.roundResults?.length, resultRoundKey, resultPhase]);
 
   useEffect(() => {
     if (state?.status === "game_over") {
@@ -308,9 +309,12 @@ export default function Game() {
       ...revealResults.map((result, rank) => {
         const playerIndex = state.players.findIndex((player) => player.id === result.playerId);
         return {
+          playerId: result.playerId,
           value: result.guess,
           label: result.playerName,
           points: result.points,
+          bonusPoints: result.bonusPoints ?? 0,
+          isPerfect: result.diff === 0,
           animal: state.players[playerIndex]?.animal,
           color: colorForPlayer(state.players[playerIndex]?.animal, playerIndex),
           delayMs: REVEAL_GUESS_BASE + rank * REVEAL_STEP,
@@ -330,6 +334,7 @@ export default function Game() {
       },
     ];
   })();
+  const perfectMarkers = resultMarkers.filter((marker) => marker.isPerfect);
 
   return (
     <div className="min-h-[100dvh] flex flex-col select-none">
@@ -525,7 +530,7 @@ export default function Game() {
 
         {/* ── RUNDEN-ERGEBNIS ─────────────────────────────────── */}
         {state.status === "round_results" && state.roundResults && (
-          <section className="w-full min-h-[560px] flex flex-col animate-in fade-in duration-500">
+          <section data-result-phase={resultPhase} className="w-full min-h-[560px] flex flex-col animate-in fade-in duration-500">
             <div className="text-center">
               <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
                 {t("game.reveal")}
@@ -538,7 +543,7 @@ export default function Game() {
               </p>
             </div>
 
-            {(resultPhase === "slider" || resultPhase === "slider_exit") && (
+            {(["slider", "slider_hold", "perfect_guess", "slider_exit"] as ResultPhase[]).includes(resultPhase) && (
               <div
                 className={cn(
                   "flex-1 flex items-center transition-all duration-[600ms] ease-in-out",
@@ -546,7 +551,12 @@ export default function Game() {
                 )}
               >
                 <GameSlider
+                  key={resultRoundKey}
                   disabled
+                  onTruthSettled={(origin) => {
+                    setTruthOrigin(origin);
+                    setResultPhase(perfectMarkers.length > 0 ? "perfect_guess" : "slider_hold");
+                  }}
                   showLegend={false}
                   leftLabel={state.currentCategoryLeftLabel}
                   rightLabel={state.currentCategoryRightLabel}
@@ -566,7 +576,7 @@ export default function Game() {
                   markers={resultMarkers}
                   revealRows={resultPhase === "round_results"}
                   showTruth={false}
-                  className="w-full max-w-lg mx-auto [&>div]:text-lg [&>div]:py-3 [&>div>div]:w-10 [&>div>div]:h-10 [&>div>div]:text-sm"
+                  className="w-full max-w-lg mx-auto [&>div]:text-lg [&>div]:py-3 [&>div>div:first-child]:w-10 [&>div>div:first-child]:h-10 [&>div>div:first-child]:text-sm"
                 />
               </div>
             )}
@@ -677,6 +687,15 @@ export default function Game() {
           </section>
         )}
       </main>
+
+      {state.status === "round_results" && resultPhase === "perfect_guess" && truthOrigin && perfectMarkers.length > 0 && (
+        <PerfectGuessCelebration
+          key={resultRoundKey}
+          origin={truthOrigin}
+          winners={perfectMarkers}
+          onComplete={() => setResultPhase("slider_exit")}
+        />
+      )}
 
       {/* ── ABKÜRZEN-BESTÄTIGUNG ───────────────────────────────── */}
       <AlertDialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>
