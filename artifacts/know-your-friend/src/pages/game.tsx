@@ -60,6 +60,7 @@ const LEADERBOARD_RESHUFFLE_BUFFER = 800;
 const STAGE_TRANSITION_MS = 600;
 const ROUND_RESULT_ROW_STEP = 280;
 const ROUND_RESULTS_HOLD_MS = 1400;
+const NEXT_TURN_READY_DELAY_MS = 1000;
 
 type ResultPhase = "slider" | "slider_exit" | "round_results" | "round_results_exit" | "leaderboard";
 
@@ -191,6 +192,17 @@ export default function Game() {
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [resultPhase, setResultPhase] = useState<ResultPhase>("slider");
   const [leaderboardSorted, setLeaderboardSorted] = useState(false);
+  const [isNextTurnReady, setIsNextTurnReady] = useState(false);
+
+  useEffect(() => {
+    if (!leaderboardSorted) {
+      setIsNextTurnReady(false);
+      return;
+    }
+
+    const timer = setTimeout(() => setIsNextTurnReady(true), NEXT_TURN_READY_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [leaderboardSorted]);
 
   useEffect(() => {
     setResultPhase("slider");
@@ -263,6 +275,7 @@ export default function Game() {
   };
 
   const handleNextTurn = () => {
+    if (!isNextTurnReady) return;
     send({ type: "next_turn" });
   };
 
@@ -654,10 +667,10 @@ export default function Game() {
             {/* Next button – only the next player can advance */}
             {resultPhase === "leaderboard" && <Button
               className="w-full py-3 text-base font-black rounded-full"
-              disabled={nextPlayer?.id !== playerId}
+              disabled={nextPlayer?.id !== playerId || !isNextTurnReady}
               onClick={handleNextTurn}
             >
-              {nextPlayer?.id !== playerId
+              {nextPlayer?.id !== playerId || !isNextTurnReady
                 ? t("game.waiting")
                 : isLastTurn ? t("game.endGame") : t("game.continue")}
             </Button>}
