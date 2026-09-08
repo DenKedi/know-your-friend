@@ -5,7 +5,7 @@ import deerImage from "@/assets/icons/Animals Design 1/Deer.webp";
 import bearImage from "@/assets/icons/Animals Design 1/Bear.webp";
 import wolfImage from "@/assets/icons/Animals Design 1/Wolf.webp";
 import owlImage from "@/assets/icons/Animals Design 1/Owl.webp";
-import squirrelImage from "@/assets/icons/Animals Design 1/Squirrel.webp";
+import raccoonAvatarImage from "@/assets/icons/Animals Design 3/10_raccoon.png";
 
 /**
  * Scene & slot configuration for the lobby waiting-room scene.
@@ -23,13 +23,13 @@ export type LabelPlacement = "above" | "below";
 
 export const ANIMAL_OPTIONS = [
   { id: "fox", emoji: "🦊", image: foxImage, label: "Fox", color: { bg: "#FF4B8B", text: "#fff" } },
-  { id: "raccoon", emoji: "🦝", image: raccoonImage, label: "Raccoon", color: { bg: "#00C8E8", text: "#111" } },
   { id: "hedgehog", emoji: "🦔", image: hedgehogImage, label: "Hedgehog", color: { bg: "#9B60FF", text: "#fff" } },
+  { id: "raccoon", emoji: "🦝", image: raccoonImage, label: "Raccoon", color: { bg: "#00C8E8", text: "#111" } },
   { id: "deer", emoji: "🦌", image: deerImage, label: "Deer", color: { bg: "#2ECC71", text: "#111" } },
   { id: "bear", emoji: "🐻", image: bearImage, label: "Bear", color: { bg: "#FF6B35", text: "#fff" } },
   { id: "wolf", emoji: "🐺", image: wolfImage, label: "Wolf", color: { bg: "#F4D35E", text: "#111" } },
   { id: "owl", emoji: "🦉", image: owlImage, label: "Owl", color: { bg: "#3A86FF", text: "#fff" } },
-  { id: "squirrel", emoji: "🐿️", image: squirrelImage, label: "Squirrel", color: { bg: "#EF476F", text: "#fff" } },
+  { id: "squirrel", emoji: "🦝", image: raccoonAvatarImage, label: "Raccoon", color: { bg: "#EF476F", text: "#fff" } },
 ] as const;
 
 export type AnimalId = (typeof ANIMAL_OPTIONS)[number]["id"];
