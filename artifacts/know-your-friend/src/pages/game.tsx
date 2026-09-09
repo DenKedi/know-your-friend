@@ -380,7 +380,7 @@ export default function Game() {
         {/* ── KATEGORIE WÄHLEN ─────────────────────────────────── */}
         {state.status === "category_selection" && (
           <section className="w-full">
-            <h2 className="text-2xl font-black text-center leading-tight">
+            <h2 className="font-display text-2xl font-black text-center leading-tight">
               {isCurrentPlayer
                 ? t("game.selectCategory")
                 : t("game.selectingCategory", { name: currentPlayer?.name ?? "-" })}
@@ -413,7 +413,7 @@ export default function Game() {
         {state.status === "self_rating" && (
           <section className="w-full space-y-6">
             <div className="text-center">
-              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">
+              <h2 className="font-display text-3xl font-black text-primary uppercase tracking-tight">
                 {state.currentCategoryLabel}
               </h2>
               <p className="text-base text-muted-foreground mt-1">
@@ -464,7 +464,7 @@ export default function Game() {
         {state.status === "guessing" && (
           <section className="w-full space-y-6">
             <div className="text-center">
-              <h2 className="text-3xl font-black text-primary uppercase tracking-tight">
+              <h2 className="font-display text-3xl font-black text-primary uppercase tracking-tight">
                 {state.currentCategoryLabel}
               </h2>
               <p className="text-base text-muted-foreground mt-1">
@@ -532,7 +532,7 @@ export default function Game() {
         {state.status === "round_results" && state.roundResults && (
           <section data-result-phase={resultPhase} className="w-full min-h-[560px] flex flex-col animate-in fade-in duration-500">
             <div className="text-center">
-              <h2 className="text-2xl font-black text-primary uppercase tracking-tight">
+              <h2 className="font-display text-2xl font-black text-primary uppercase tracking-tight">
                 {t("game.reveal")}
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -583,7 +583,7 @@ export default function Game() {
 
             {resultPhase === "leaderboard" && (
             <div className="flex-1 flex flex-col justify-center w-full max-w-lg mx-auto animate-in fade-in zoom-in-95 duration-500">
-              <h3 className="text-center text-xl font-black text-primary uppercase tracking-tight mb-4">
+              <h3 className="font-display text-center text-xl font-black text-primary uppercase tracking-tight mb-4">
                 {t("game.standings")}
               </h3>
               <div className="divide-y divide-white/10">

@@ -435,10 +435,10 @@ export function GameSlider({
 
       {/* Left / Right labels */}
       <div className="flex justify-between items-start px-1 mt-1">
-        <div className="text-left font-bold text-sm max-w-[45%] text-primary leading-tight hyphens-auto">
+        <div className="font-display text-left font-bold text-sm max-w-[45%] text-primary leading-tight hyphens-auto">
           {leftLabel}
         </div>
-        <div className="text-right font-bold text-sm max-w-[45%] text-secondary leading-tight hyphens-auto">
+        <div className="font-display text-right font-bold text-sm max-w-[45%] text-secondary leading-tight hyphens-auto">
           {rightLabel}
         </div>
       </div>

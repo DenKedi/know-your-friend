@@ -120,7 +120,7 @@ export function PerfectGuessCelebration({ origin, winners, onComplete }: Props) 
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.3em] text-[#e8ce89]">
             {t("game.perfectMatch", { value: winners[0]?.value ?? 0 })}
           </p>
-          <h2 className="max-w-4xl text-[clamp(2.5rem,8vw,6rem)] leading-[0.95] font-black uppercase tracking-tight text-[#fff3be] drop-shadow-lg">
+          <h2 className="font-display max-w-4xl text-[clamp(2.5rem,8vw,6rem)] leading-[0.95] font-black uppercase tracking-tight text-[#fff3be] drop-shadow-lg">
             {t("game.perfectGuess")}
           </h2>
           <div className="mt-4 sm:mt-5">

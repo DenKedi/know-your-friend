@@ -46,7 +46,7 @@ export default function Results() {
 
       {/* Hero */}
       <div className="w-full max-w-lg text-center mb-10 animate-in slide-in-from-top-8 duration-700">
-        <h1 className="text-6xl font-black text-primary uppercase tracking-tight mb-3">
+        <h1 className="font-display text-6xl font-black text-primary uppercase tracking-tight mb-3">
           {t("results.title")}
         </h1>
         <p className="text-2xl font-bold text-foreground">

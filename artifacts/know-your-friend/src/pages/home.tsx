@@ -188,7 +188,7 @@ export default function Home() {
 
         {/* Hero */}
         <div className="text-center w-full -mt-4 sm:-mt-6">
-          <h1 className="text-5xl sm:text-6xl font-black uppercase tracking-tight leading-[0.95] drop-shadow-lg">
+          <h1 className="font-display text-5xl sm:text-6xl font-black uppercase tracking-tight leading-[0.95] drop-shadow-lg">
             <span
               className="block bg-clip-text text-transparent"
               style={{ backgroundImage: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 60%, hsl(var(--foreground)) 100%)" }}
@@ -288,7 +288,7 @@ export default function Home() {
       <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && setPendingAction(null)}>
         <DialogContent className="max-w-sm gap-5 rounded-[28px] border-primary/30 bg-background/95 p-5 shadow-2xl shadow-black/40 backdrop-blur-2xl sm:p-7 [&>button:last-child]:right-5 [&>button:last-child]:top-5 [&>button:last-child]:rounded-full [&>button:last-child]:bg-white/5 [&>button:last-child]:p-1 [&>button:last-child]:opacity-100">
           <DialogHeader className="pr-8 text-left">
-            <DialogTitle className="text-3xl font-black tracking-tight">
+            <DialogTitle className="font-display text-3xl font-black tracking-tight">
               {t("home.namePromptTitle")}
             </DialogTitle>
             <DialogDescription className="text-base leading-snug text-foreground/65">
