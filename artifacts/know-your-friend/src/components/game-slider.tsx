@@ -43,6 +43,8 @@ interface GameSliderProps {
   markers?: SliderMarker[];
   showLegend?: boolean;
   showValue?: boolean;
+  /** The player represented by the interactive slider thumb. */
+  thumbPlayer?: { animal?: string; name: string };
   /** Fires once, after the truth circle has rendered at its final position. */
   onTruthSettled?: (origin: TruthRevealOrigin) => void;
 }
@@ -186,6 +188,7 @@ export function GameSlider({
   markers = [],
   showLegend = true,
   showValue = false,
+  thumbPlayer,
   onTruthSettled,
 }: GameSliderProps) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -392,11 +395,13 @@ export function GameSlider({
         {!disabled && (
           <div
             className={cn(
-              "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 bg-white rounded-full shadow-[0_0_15px_rgba(0,0,0,0.4)] border-4 border-primary transition-transform pointer-events-none z-20",
+              "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-4 border-primary bg-white p-0.5 text-[10px] font-black text-primary shadow-[0_0_15px_rgba(0,0,0,0.4)] transition-transform pointer-events-none z-20",
               isDragging && "scale-125"
             )}
             style={{ left: `calc(${localValue}% * 0.88 + 6%)` }}
-          />
+          >
+            {thumbPlayer && <AnimalIcon animal={thumbPlayer.animal} label={thumbPlayer.name} />}
+          </div>
         )}
       </div>
 

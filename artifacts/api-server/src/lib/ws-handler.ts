@@ -17,6 +17,7 @@ import {
   getRoomStateForClient,
   setRoundsPerPlayer,
   setRoomLanguage,
+  setPlayerLanguage,
 } from "./game-engine";
 import { GAMEPLAY_CONFIG } from "./gameplay-config";
 import { isLanguageCode } from "./languages";
@@ -113,8 +114,13 @@ function sendState(ws: WebSocket, roomCode: string, viewerPlayerId?: string): vo
 function broadcastState(roomCode: string): void {
   const room = getRoom(roomCode);
   if (!room) return;
-  const state = getRoomStateForClient(room);
-  broadcastToRoom(roomCode, { type: "state", state });
+  const clients = roomClients.get(roomCode);
+  if (!clients) return;
+  for (const [playerId, ws] of clients) {
+    if (ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "state", state: getRoomStateForClient(room, playerId) }));
+    }
+  }
 }
 
 export function attachWebSocketServer(wss: WebSocketServer): void {
@@ -122,6 +128,7 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
     const url = new URL(req.url ?? "", `http://localhost`);
     const roomCode = url.searchParams.get("roomCode");
     const playerToken = url.searchParams.get("playerToken");
+    const playerLanguage = url.searchParams.get("language");
 
     if (!roomCode || !playerToken) {
       ws.send(JSON.stringify({ type: "error", message: "Missing roomCode or playerToken" }));
@@ -143,6 +150,10 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
       return;
     }
 
+    if (isLanguageCode(playerLanguage)) {
+      setPlayerLanguage(player, playerLanguage);
+    }
+
     if (!roomClients.has(roomCode)) {
       roomClients.set(roomCode, new Map());
     }
@@ -152,10 +163,7 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
 
     sendState(ws, roomCode, player.id);
 
-    broadcastToRoom(roomCode, {
-      type: "state",
-      state: getRoomStateForClient(room, player.id),
-    });
+    broadcastState(roomCode);
 
     ws.on("message", (raw) => {
       let msg: { type: string; [key: string]: unknown };
@@ -280,6 +288,15 @@ export function attachWebSocketServer(wss: WebSocketServer): void {
             return;
           }
           broadcastState(roomCode);
+          break;
+        }
+        case "set_player_language": {
+          if (!isLanguageCode(msg.language)) {
+            ws.send(JSON.stringify({ type: "error", message: "Invalid language" }));
+            return;
+          }
+          setPlayerLanguage(currentPlayer, msg.language);
+          sendState(ws, roomCode, currentPlayer.id);
           break;
         }
         case "set_language": {

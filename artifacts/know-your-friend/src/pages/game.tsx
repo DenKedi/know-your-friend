@@ -29,6 +29,7 @@ import { AnimalIcon } from "@/components/animal-icon";
 import { getAnimalColor } from "@/lib/scene-config";
 import { SoundToggle } from "@/components/sound-toggle";
 import { useSound } from "@/lib/sound";
+import { LanguageMenu } from "@/components/language-menu";
 
 // Keep the wood texture decoded in memory. When the browser re-rasterizes
 // composited layers (e.g. on zoom in/out), the texture would otherwise be
@@ -354,6 +355,7 @@ export default function Game() {
         </div>
         <div className="flex items-center gap-1.5">
           <SoundToggle />
+          <LanguageMenu onLanguageChange={(language) => send({ type: "set_player_language", language })} />
           {canEndEarly && (
             <Button
               variant="ghost"
@@ -437,6 +439,7 @@ export default function Game() {
                     onPathChange={setSliderPath}
                     leftLabel={state.currentCategoryLeftLabel}
                     rightLabel={state.currentCategoryRightLabel}
+                    thumbPlayer={currentPlayer ? { animal: currentPlayer.animal, name: currentPlayer.name } : undefined}
                     showValue
                   />
                   <Button
@@ -488,6 +491,7 @@ export default function Game() {
                     onPathChange={setSliderPath}
                     leftLabel={state.currentCategoryLeftLabel}
                     rightLabel={state.currentCategoryRightLabel}
+                    thumbPlayer={currentPlayer ? { animal: currentPlayer.animal, name: currentPlayer.name } : undefined}
                     showValue
                   />
                   <Button
@@ -931,7 +935,10 @@ function CategorySignpost({
   const [displayed, setDisplayed] = useState<Category[]>(categories);
   const [phase, setPhase] = useState<"enter" | "spin" | "idle" | "select">("enter");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const prevIdsRef = useRef<string>(categories.map((c) => c.id).join(","));
+  const categorySignature = categories
+    .map((category) => [category.id, category.label, category.leftLabel, category.rightLabel].join("\u0000"))
+    .join("\u0001");
+  const prevCategorySignatureRef = useRef(categorySignature);
   // End the initial enter phase after the last sign's enter animation finishes.
   useEffect(() => {
     const enterEnd =
@@ -946,11 +953,11 @@ function CategorySignpost({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Trigger a spin whenever the category set actually changes.
+  // Trigger a spin whenever the visible category content changes, including
+  // when the same category IDs arrive with translations for another language.
   useEffect(() => {
-    const newIds = categories.map((c) => c.id).join(",");
-    if (newIds === prevIdsRef.current) return;
-    prevIdsRef.current = newIds;
+    if (categorySignature === prevCategorySignatureRef.current) return;
+    prevCategorySignatureRef.current = categorySignature;
     // A spin from the server overrides any in-flight selection animation.
     setSelectedId(null);
     setPhase("spin");
@@ -979,7 +986,7 @@ function CategorySignpost({
       swaps.forEach(clearTimeout);
       clearTimeout(done);
     };
-  }, [categories]);
+  }, [categories, categorySignature]);
 
   // Fire the actual selection only after the chosen sign has flown off-screen.
   useEffect(() => {

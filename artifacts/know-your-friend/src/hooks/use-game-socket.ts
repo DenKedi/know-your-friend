@@ -26,7 +26,8 @@ type OutgoingMessage =
   | { type: "end_game_early" }
   | { type: "leave_room" }
   | { type: "set_rounds_per_player"; roundsPerPlayer: number }
-  | { type: "set_language"; language: LanguageCode };
+  | { type: "set_language"; language: LanguageCode }
+  | { type: "set_player_language"; language: LanguageCode };
 
 type IncomingMessage =
   | { type: "state"; state: GameRoomState }

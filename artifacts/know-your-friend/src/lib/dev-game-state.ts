@@ -26,7 +26,8 @@ export type OutgoingMessage =
   | { type: "reroll_categories" }
   | { type: "end_game_early" }
   | { type: "leave_room" }
-  | { type: "set_rounds_per_player"; roundsPerPlayer: number };
+  | { type: "set_rounds_per_player"; roundsPerPlayer: number }
+  | { type: "set_player_language"; language: "en" | "de" | "fr" | "es" | "it" | "ru" };
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -61,6 +62,33 @@ const CATS_B = [
 ];
 
 const ALL_CATS = [...CATS_A, ...CATS_B];
+
+const GERMAN_CATEGORY_LABELS: Record<string, { label: string; leftLabel: string; rightLabel: string }> = {
+  "dev-c1": { label: "Introversion vs. Extraversion", leftLabel: "Introvertiert", rightLabel: "Extrovertiert" },
+  "dev-c2": { label: "Risikobereitschaft", leftLabel: "Risikoscheu", rightLabel: "Risikofreudig" },
+  "dev-c3": { label: "Pünktlichkeit", leftLabel: "Immer zu spät", rightLabel: "Immer pünktlich" },
+  "dev-c4": { label: "Ordentlichkeit", leftLabel: "Chaotisch", rightLabel: "Sehr ordentlich" },
+  "dev-c5": { label: "Abenteuerlust", leftLabel: "Stubenhocker", rightLabel: "Abenteurer" },
+  "dev-c6": { label: "Nachteule oder Frühaufsteher", leftLabel: "Nachteule", rightLabel: "Frühaufsteher" },
+};
+
+function localizeDevCategory(category: typeof ALL_CATS[number], language: GameRoomState["language"]) {
+  return language === "de" ? { ...category, ...GERMAN_CATEGORY_LABELS[category.id] } : category;
+}
+
+function localizeDevState(state: GameRoomState, language: GameRoomState["language"]): GameRoomState {
+  const currentCategory = state.currentCategory ? catById(state.currentCategory) : null;
+  const localizedCurrentCategory = currentCategory && localizeDevCategory(currentCategory, language);
+
+  return {
+    ...state,
+    language,
+    availableCategories: state.availableCategories.map((category) => localizeDevCategory(catById(category.id), language)),
+    currentCategoryLabel: localizedCurrentCategory?.label ?? null,
+    currentCategoryLeftLabel: localizedCurrentCategory?.leftLabel ?? null,
+    currentCategoryRightLabel: localizedCurrentCategory?.rightLabel ?? null,
+  };
+}
 
 function catById(id: string) {
   return ALL_CATS.find((c) => c.id === id) ?? CATS_A[0]!;
@@ -499,6 +527,9 @@ export function applyDevAction(
         totalRounds: rpp,
       };
     }
+
+    case "set_player_language":
+      return localizeDevState(state, message.language);
 
     default:
       return state;

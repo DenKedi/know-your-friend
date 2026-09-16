@@ -12,10 +12,12 @@ const {
   getRoomStateForClient,
   joinRoom,
   selectCategory,
+  setPlayerLanguage,
   startGame,
   submitGuess,
   submitSelfRating,
 } = await import("../src/lib/game-engine");
+const { getLocalizedCategory } = await import("../src/lib/categories-store");
 const { GetRoomResponse } = await import("../../../lib/api-zod/src/generated/api");
 
 function guessingRoom(t: TestContext, rating = 73, playerCount = 4) {
@@ -67,6 +69,26 @@ test("a timed-out guesser receives no bonus or result even when truth is the def
   assert.equal(room.timedOutGuessers.has(timedOut!.id), true);
   assert.deepEqual(room.roundResults?.map((result) => result.playerId), [submitted!.id]);
   assert.deepEqual(room.players.map((player) => player.score), [0, 150, 0]);
+});
+
+test("room state localizes categories for each player's preferred language", (t) => {
+  const { room, player: host } = createRoom("Host", 1, "en", "fox");
+  t.after(() => cleanupRoom(room.code));
+  const joined = joinRoom(room.code, "Spieler", "owl");
+  assert.ok(joined);
+  setPlayerLanguage(joined.player, "de");
+  assert.equal(startGame(room), true);
+
+  const categoryId = room.currentAvailableCategories[0]!.id;
+  assert.equal(selectCategory(room, categoryId), true);
+  const germanState = getRoomStateForClient(room, joined.player.id);
+  const germanCategory = getLocalizedCategory(categoryId, "de");
+
+  assert.equal(germanState.language, "de");
+  assert.equal(germanState.currentCategoryLabel, germanCategory?.label);
+  assert.equal(germanState.currentCategoryLeftLabel, germanCategory?.leftLabel);
+  assert.equal(germanState.currentCategoryRightLabel, germanCategory?.rightLabel);
+  assert.equal(getRoomStateForClient(room, host.id).language, "en");
 });
 
 test("a recorded exact value does not award a player already flagged as timed out", (t) => {

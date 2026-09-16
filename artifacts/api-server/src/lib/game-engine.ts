@@ -16,6 +16,7 @@ export interface Player {
   id: string;
   name: string;
   animal: Animal;
+  language: LanguageCode;
   score: number;
   isHost: boolean;
   token: string;
@@ -128,6 +129,7 @@ export function createRoom(
     id: hostId,
     name: hostName,
     animal,
+    language,
     score: 0,
     isHost: true,
     token: hostToken,
@@ -176,6 +178,7 @@ export function joinRoom(
     id: playerId,
     name: playerName,
     animal,
+    language: room.language,
     score: 0,
     isHost: false,
     token: playerToken,
@@ -200,6 +203,10 @@ export function setRoomLanguage(room: Room, language: LanguageCode): boolean {
   if (room.status !== "waiting") return false;
   room.language = language;
   return true;
+}
+
+export function setPlayerLanguage(player: Player, language: LanguageCode): void {
+  player.language = language;
 }
 
 export function getRoom(roomCode: string): Room | undefined {
@@ -391,8 +398,15 @@ export function nextTurn(room: Room): boolean {
   return true;
 }
 
-export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
+export function getRoomStateForClient(room: Room, viewerPlayerId?: string) {
   const currentPlayer = room.players[room.currentPlayerIndex];
+  const viewerLanguage = room.players.find((player) => player.id === viewerPlayerId)?.language ?? room.language;
+  const localize = (category: LocalizedCategory | null) =>
+    category ? getLocalizedCategory(category.id, viewerLanguage) ?? category : null;
+  const currentCategory = localize(room.currentCategory);
+  const availableCategories = room.currentAvailableCategories
+    .map((category) => localize(category))
+    .filter((category): category is LocalizedCategory => category !== null);
 
   // Determine who has and hasn't submitted (during guessing phase)
   const guessedPlayerIds = Array.from(room.guesses.keys());
@@ -409,7 +423,7 @@ export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
 
   return {
     roomCode: room.code,
-    language: room.language,
+    language: viewerLanguage,
     status: room.status,
     players: room.players.map((p) => ({
       id: p.id,
@@ -423,10 +437,10 @@ export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
     roundsPerPlayer: room.roundsPerPlayer,
     currentPlayerId: currentPlayer?.id ?? null,
     nextPlayerId: nextRatedPlayer?.id ?? null,
-    currentCategory: room.currentCategory?.id ?? null,
-    currentCategoryLabel: room.currentCategory?.label ?? null,
-    currentCategoryLeftLabel: room.currentCategory?.leftLabel ?? null,
-    currentCategoryRightLabel: room.currentCategory?.rightLabel ?? null,
+    currentCategory: currentCategory?.id ?? null,
+    currentCategoryLabel: currentCategory?.label ?? null,
+    currentCategoryLeftLabel: currentCategory?.leftLabel ?? null,
+    currentCategoryRightLabel: currentCategory?.rightLabel ?? null,
     selfRating:
       room.status === "round_results" || room.status === "game_over"
         ? room.selfRating
@@ -436,7 +450,7 @@ export function getRoomStateForClient(room: Room, _viewerPlayerId?: string) {
     guessedPlayerIds,
     pendingGuesserIds,
     roundResults: room.roundResults,
-    availableCategories: room.currentAvailableCategories,
+    availableCategories,
     rerollUsedThisTurn: room.rerollUsedThisTurn,
     phaseDeadline: room.phaseDeadline,
   };
