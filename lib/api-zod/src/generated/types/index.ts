@@ -8,6 +8,9 @@
 
 export * from "./animal";
 export * from "./category";
+export * from "./categorySuggestion";
+export * from "./categorySuggestionStatus";
+export * from "./createCategorySuggestionBody";
 export * from "./createRoomBody";
 export * from "./errorResponse";
 export * from "./guessResult";
@@ -15,6 +18,9 @@ export * from "./healthStatus";
 export * from "./joinRoomBody";
 export * from "./joinRoomResponse";
 export * from "./languageCode";
+export * from "./listCategorySuggestionsParams";
 export * from "./player";
 export * from "./roomState";
 export * from "./roomStateStatus";
+export * from "./updateCategorySuggestionStatusBody";
+export * from "./updateCategorySuggestionStatusBodyStatus";

@@ -1,6 +1,8 @@
 export * from "./generated/api";
 export type {
   Category,
+  CategorySuggestion,
+  CategorySuggestionStatus,
   ErrorResponse,
   GuessResult,
   HealthStatus,

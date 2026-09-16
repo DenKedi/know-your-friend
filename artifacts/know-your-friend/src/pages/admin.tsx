@@ -28,6 +28,14 @@ interface Category {
   translations: CategoryTranslations;
 }
 
+interface CategorySuggestion extends TranslationFields {
+  id: string;
+  language: LanguageCode;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  updatedAt: string;
+}
+
 const API_BASE = apiUrl("/api");
 
 function createEmptyTranslation(): TranslationFields {
@@ -180,6 +188,18 @@ function AdminPanel() {
     translations: createEmptyTranslations(),
   });
   const [showNew, setShowNew] = useState(false);
+  const [suggestions, setSuggestions] = useState<CategorySuggestion[]>([]);
+  const [sourceSuggestionId, setSourceSuggestionId] = useState<string | null>(null);
+
+  async function reloadSuggestions() {
+    try {
+      const res = await fetch(`${API_BASE}/category-suggestions?status=pending`);
+      if (!res.ok) throw new Error();
+      setSuggestions((await res.json()) as CategorySuggestion[]);
+    } catch {
+      toast({ title: t("admin.suggestionsLoadingFailed"), variant: "destructive" });
+    }
+  }
 
   async function reload() {
     setLoading(true);
@@ -196,6 +216,7 @@ function AdminPanel() {
 
   useEffect(() => {
     reload();
+    reloadSuggestions();
   }, []);
 
   async function saveNew() {
@@ -214,10 +235,51 @@ function AdminPanel() {
       toast({ title: t("admin.saveFailed"), description: err.error, variant: "destructive" });
       return;
     }
+    if (sourceSuggestionId) {
+      const statusResponse = await fetch(
+        `${API_BASE}/category-suggestions/${sourceSuggestionId}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "approved" }),
+        },
+      );
+      if (!statusResponse.ok) {
+        toast({ title: t("admin.suggestionStatusFailed"), variant: "destructive" });
+      }
+    }
     setShowNew(false);
+    setSourceSuggestionId(null);
     setDraft({ id: "", translations: createEmptyTranslations() });
     toast({ title: t("admin.added") });
     reload();
+    reloadSuggestions();
+  }
+
+  function takeSuggestion(suggestion: CategorySuggestion) {
+    const translations = createEmptyTranslations();
+    translations[suggestion.language] = {
+      label: suggestion.label,
+      leftLabel: suggestion.leftLabel,
+      rightLabel: suggestion.rightLabel,
+    };
+    setDraft({ id: "", translations });
+    setSourceSuggestionId(suggestion.id);
+    setShowNew(true);
+  }
+
+  async function rejectSuggestion(id: string) {
+    const res = await fetch(`${API_BASE}/category-suggestions/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "rejected" }),
+    });
+    if (!res.ok) {
+      toast({ title: t("admin.suggestionStatusFailed"), variant: "destructive" });
+      return;
+    }
+    toast({ title: t("admin.suggestionRejected") });
+    reloadSuggestions();
   }
 
   async function saveEdit(id: string, translations: Record<LanguageCode, TranslationFields>) {
@@ -303,7 +365,11 @@ function AdminPanel() {
         {/* Action bar */}
         <div className="flex gap-2 mb-4">
           <button
-            onClick={() => setShowNew((value) => !value)}
+            onClick={() => {
+              setSourceSuggestionId(null);
+              setDraft({ id: "", translations: createEmptyTranslations() });
+              setShowNew((value) => !value);
+            }}
             className="rounded-full px-5 py-2 text-sm font-bold text-primary-foreground shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0"
             style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
           >
@@ -316,6 +382,52 @@ function AdminPanel() {
             {t("admin.reset")}
           </button>
         </div>
+
+        <section className="mb-6 rounded-2xl border border-white/10 bg-background/30 backdrop-blur-md p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-sm font-black uppercase tracking-wide text-primary">
+              {t("admin.suggestions")}
+            </h2>
+            <span className="text-xs font-bold text-foreground/40">{suggestions.length}</span>
+          </div>
+          {suggestions.length === 0 ? (
+            <p className="text-sm text-foreground/45">{t("admin.noSuggestions")}</p>
+          ) : (
+            <div className="space-y-2">
+              {suggestions.map((suggestion) => (
+                <div key={suggestion.id} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold">{suggestion.label}</div>
+                      <div className="text-xs text-foreground/55">
+                        {suggestion.leftLabel} ↔ {suggestion.rightLabel}
+                      </div>
+                      <div className="mt-1 text-[10px] font-bold uppercase text-foreground/35">
+                        {suggestion.language}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => takeSuggestion(suggestion)}
+                        className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary"
+                      >
+                        {t("admin.takeSuggestion")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => rejectSuggestion(suggestion.id)}
+                        className="rounded-full border border-destructive/20 bg-destructive/5 px-3 py-1.5 text-xs font-bold text-destructive/70"
+                      >
+                        {t("admin.rejectSuggestion")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* New category form */}
         {showNew && (
@@ -350,7 +462,10 @@ function AdminPanel() {
                 {t("common.save")}
               </button>
               <button
-                onClick={() => setShowNew(false)}
+                onClick={() => {
+                  setShowNew(false);
+                  setSourceSuggestionId(null);
+                }}
                 className="rounded-full px-5 py-2 text-sm font-bold text-foreground/70 border border-white/15 bg-white/5 transition-all hover:bg-white/10"
               >
                 {t("common.cancel")}

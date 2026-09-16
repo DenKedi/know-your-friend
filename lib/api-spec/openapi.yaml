@@ -11,6 +11,8 @@ tags:
     description: Health operations
   - name: rooms
     description: Game room operations
+  - name: category-suggestions
+    description: Player-submitted category suggestions
 paths:
   /healthz:
     get:
@@ -113,8 +115,139 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /category-suggestions:
+    post:
+      operationId: createCategorySuggestion
+      tags: [category-suggestions]
+      summary: Submit a category suggestion for later review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCategorySuggestionBody"
+      responses:
+        "201":
+          description: Suggestion created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategorySuggestion"
+        "400":
+          description: Invalid suggestion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    get:
+      operationId: listCategorySuggestions
+      tags: [category-suggestions]
+      summary: List category suggestions for admin review
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/CategorySuggestionStatus"
+      responses:
+        "200":
+          description: Suggestions ordered newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategorySuggestion"
+
+  /category-suggestions/{suggestionId}/status:
+    patch:
+      operationId: updateCategorySuggestionStatus
+      tags: [category-suggestions]
+      summary: Mark a category suggestion as approved or rejected
+      parameters:
+        - name: suggestionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCategorySuggestionStatusBody"
+      responses:
+        "200":
+          description: Suggestion updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CategorySuggestion"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Suggestion not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
+    CategorySuggestionStatus:
+      type: string
+      enum: [pending, approved, rejected]
+
+    CreateCategorySuggestionBody:
+      type: object
+      additionalProperties: false
+      properties:
+        language:
+          $ref: "#/components/schemas/LanguageCode"
+        label:
+          type: string
+          minLength: 1
+          maxLength: 80
+        leftLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+        rightLabel:
+          type: string
+          minLength: 1
+          maxLength: 80
+      required: [language, label, leftLabel, rightLabel]
+
+    UpdateCategorySuggestionStatusBody:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+      required: [status]
+
+    CategorySuggestion:
+      allOf:
+        - $ref: "#/components/schemas/CreateCategorySuggestionBody"
+        - type: object
+          properties:
+            id:
+              type: string
+            status:
+              $ref: "#/components/schemas/CategorySuggestionStatus"
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+          required: [id, status, createdAt, updatedAt]
+
     HealthStatus:
       type: object
       properties:

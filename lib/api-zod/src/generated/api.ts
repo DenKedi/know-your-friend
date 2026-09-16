@@ -155,3 +155,102 @@ export const GetRoomResponse = zod.object({
     }),
   ),
 });
+
+/**
+ * @summary Submit a category suggestion for later review
+ */
+export const createCategorySuggestionBodyLabelMax = 80;
+
+export const createCategorySuggestionBodyLeftLabelMax = 80;
+
+export const createCategorySuggestionBodyRightLabelMax = 80;
+
+export const CreateCategorySuggestionBody = zod.object({
+  language: zod.enum(["en", "de", "fr", "es", "it", "ru"]),
+  label: zod.string().min(1).max(createCategorySuggestionBodyLabelMax),
+  leftLabel: zod.string().min(1).max(createCategorySuggestionBodyLeftLabelMax),
+  rightLabel: zod
+    .string()
+    .min(1)
+    .max(createCategorySuggestionBodyRightLabelMax),
+});
+
+/**
+ * @summary List category suggestions for admin review
+ */
+export const ListCategorySuggestionsQueryParams = zod.object({
+  status: zod.enum(["pending", "approved", "rejected"]).optional(),
+});
+
+export const listCategorySuggestionsResponseOneLabelMax = 80;
+
+export const listCategorySuggestionsResponseOneLeftLabelMax = 80;
+
+export const listCategorySuggestionsResponseOneRightLabelMax = 80;
+
+export const ListCategorySuggestionsResponseItem = zod
+  .object({
+    language: zod.enum(["en", "de", "fr", "es", "it", "ru"]),
+    label: zod.string().min(1).max(listCategorySuggestionsResponseOneLabelMax),
+    leftLabel: zod
+      .string()
+      .min(1)
+      .max(listCategorySuggestionsResponseOneLeftLabelMax),
+    rightLabel: zod
+      .string()
+      .min(1)
+      .max(listCategorySuggestionsResponseOneRightLabelMax),
+  })
+  .and(
+    zod.object({
+      id: zod.string(),
+      status: zod.enum(["pending", "approved", "rejected"]),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    }),
+  );
+export const ListCategorySuggestionsResponse = zod.array(
+  ListCategorySuggestionsResponseItem,
+);
+
+/**
+ * @summary Mark a category suggestion as approved or rejected
+ */
+export const UpdateCategorySuggestionStatusParams = zod.object({
+  suggestionId: zod.coerce.string(),
+});
+
+export const UpdateCategorySuggestionStatusBody = zod.object({
+  status: zod.enum(["approved", "rejected"]),
+});
+
+export const updateCategorySuggestionStatusResponseOneLabelMax = 80;
+
+export const updateCategorySuggestionStatusResponseOneLeftLabelMax = 80;
+
+export const updateCategorySuggestionStatusResponseOneRightLabelMax = 80;
+
+export const UpdateCategorySuggestionStatusResponse = zod
+  .object({
+    language: zod.enum(["en", "de", "fr", "es", "it", "ru"]),
+    label: zod
+      .string()
+      .min(1)
+      .max(updateCategorySuggestionStatusResponseOneLabelMax),
+    leftLabel: zod
+      .string()
+      .min(1)
+      .max(updateCategorySuggestionStatusResponseOneLeftLabelMax),
+    rightLabel: zod
+      .string()
+      .min(1)
+      .max(updateCategorySuggestionStatusResponseOneRightLabelMax),
+  })
+  .and(
+    zod.object({
+      id: zod.string(),
+      status: zod.enum(["pending", "approved", "rejected"]),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    }),
+  );

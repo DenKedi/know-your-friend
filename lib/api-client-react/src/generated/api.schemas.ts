@@ -5,6 +5,64 @@
  * Know Your Friend game API
  * OpenAPI spec version: 0.1.0
  */
+export type CategorySuggestionStatus =
+  (typeof CategorySuggestionStatus)[keyof typeof CategorySuggestionStatus];
+
+export const CategorySuggestionStatus = {
+  pending: "pending",
+  approved: "approved",
+  rejected: "rejected",
+} as const;
+
+export type LanguageCode = (typeof LanguageCode)[keyof typeof LanguageCode];
+
+export const LanguageCode = {
+  en: "en",
+  de: "de",
+  fr: "fr",
+  es: "es",
+  it: "it",
+  ru: "ru",
+} as const;
+
+export interface CreateCategorySuggestionBody {
+  language: LanguageCode;
+  /**
+   * @minLength 1
+   * @maxLength 80
+   */
+  label: string;
+  /**
+   * @minLength 1
+   * @maxLength 80
+   */
+  leftLabel: string;
+  /**
+   * @minLength 1
+   * @maxLength 80
+   */
+  rightLabel: string;
+}
+
+export type UpdateCategorySuggestionStatusBodyStatus =
+  (typeof UpdateCategorySuggestionStatusBodyStatus)[keyof typeof UpdateCategorySuggestionStatusBodyStatus];
+
+export const UpdateCategorySuggestionStatusBodyStatus = {
+  approved: "approved",
+  rejected: "rejected",
+} as const;
+
+export interface UpdateCategorySuggestionStatusBody {
+  status: UpdateCategorySuggestionStatusBodyStatus;
+}
+
+export type CategorySuggestion = CreateCategorySuggestionBody & {
+  id: string;
+  status: CategorySuggestionStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export interface HealthStatus {
   status: string;
 }
@@ -24,17 +82,6 @@ export const Animal = {
   wolf: "wolf",
   owl: "owl",
   squirrel: "squirrel",
-} as const;
-
-export type LanguageCode = (typeof LanguageCode)[keyof typeof LanguageCode];
-
-export const LanguageCode = {
-  en: "en",
-  de: "de",
-  fr: "fr",
-  es: "es",
-  it: "it",
-  ru: "ru",
 } as const;
 
 export interface CreateRoomBody {
@@ -128,3 +175,7 @@ export interface RoomState {
   roundResults: GuessResult[] | null;
   availableCategories: Category[];
 }
+
+export type ListCategorySuggestionsParams = {
+  status?: CategorySuggestionStatus;
+};

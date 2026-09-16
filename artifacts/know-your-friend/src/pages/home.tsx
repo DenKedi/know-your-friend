@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
-import { getGetRoomQueryKey, useCreateRoom, useGetRoom, useJoinRoom } from "@workspace/api-client-react";
+import {
+  getGetRoomQueryKey,
+  useCreateCategorySuggestion,
+  useCreateRoom,
+  useGetRoom,
+  useJoinRoom,
+} from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +35,8 @@ export default function Home() {
   const [roomCode, setRoomCode] = useState("");
   const [pendingAction, setPendingAction] = useState<"create" | "join" | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [suggestionOpen, setSuggestionOpen] = useState(false);
+  const [suggestion, setSuggestion] = useState({ label: "", leftLabel: "", rightLabel: "" });
   const formRef = useRef<HTMLDivElement>(null);
   const roomCodeInputRef = useRef<HTMLInputElement>(null);
   const inviteRoomCode = new URLSearchParams(search).get("room")?.trim().toUpperCase() ?? "";
@@ -51,6 +59,7 @@ export default function Home() {
 
   const createRoom = useCreateRoom();
   const joinRoom = useJoinRoom();
+  const createSuggestion = useCreateCategorySuggestion();
   const { data: joiningRoom } = useGetRoom(normalizedRoomCode, {
     query: {
       queryKey: getGetRoomQueryKey(normalizedRoomCode),
@@ -141,6 +150,29 @@ export default function Home() {
     } else if (pendingAction === "join") {
       handleJoin();
     }
+  };
+
+  const submitSuggestion = () => {
+    const values = {
+      label: suggestion.label.trim(),
+      leftLabel: suggestion.leftLabel.trim(),
+      rightLabel: suggestion.rightLabel.trim(),
+    };
+    if (!values.label || !values.leftLabel || !values.rightLabel) {
+      toast({ title: t("suggestion.fillAll"), variant: "destructive" });
+      return;
+    }
+    createSuggestion.mutate(
+      { data: { language, ...values } },
+      {
+        onSuccess: () => {
+          setSuggestion({ label: "", leftLabel: "", rightLabel: "" });
+          setSuggestionOpen(false);
+          toast({ title: t("suggestion.thanks") });
+        },
+        onError: () => toast({ title: t("suggestion.failed"), variant: "destructive" }),
+      },
+    );
   };
 
   return (
@@ -282,6 +314,14 @@ export default function Home() {
             <span className="relative">{t("home.createRoom")}</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => setSuggestionOpen(true)}
+            className="text-xs font-semibold text-foreground/50 underline-offset-4 transition-colors hover:text-foreground/80 hover:underline"
+          >
+            {t("suggestion.open")}
+          </button>
+
         </div>
       </main>
 
@@ -357,6 +397,41 @@ export default function Home() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={suggestionOpen} onOpenChange={setSuggestionOpen}>
+        <DialogContent className="max-w-sm border-white/15 bg-card/90 backdrop-blur-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black">{t("suggestion.title")}</DialogTitle>
+            <DialogDescription>{t("suggestion.description")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {(["label", "leftLabel", "rightLabel"] as const).map((field) => (
+              <div key={field} className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground/50">
+                  {t(`suggestion.${field}`)}
+                </label>
+                <Input
+                  value={suggestion[field]}
+                  onChange={(event) =>
+                    setSuggestion((current) => ({ ...current, [field]: event.target.value }))
+                  }
+                  maxLength={80}
+                  className="bg-white/5 border-white/10"
+                />
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={submitSuggestion}
+            disabled={createSuggestion.isPending}
+            className="rounded-full py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
+          >
+            {t("suggestion.submit")}
+          </button>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Tutorial Dialog ────────────────────────────────────── */}
       <Dialog open={tutorialOpen} onOpenChange={setTutorialOpen}>
         <DialogContent className="max-w-lg border-white/15 bg-card/85 backdrop-blur-2xl">
@@ -401,4 +476,3 @@ export default function Home() {
     </div>
   );
 }
-

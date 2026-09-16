@@ -17,12 +17,16 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  CategorySuggestion,
+  CreateCategorySuggestionBody,
   CreateRoomBody,
   ErrorResponse,
   HealthStatus,
   JoinRoomBody,
   JoinRoomResponse,
+  ListCategorySuggestionsParams,
   RoomState,
+  UpdateCategorySuggestionStatusBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -359,3 +363,291 @@ export function useGetRoom<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Submit a category suggestion for later review
+ */
+export const getCreateCategorySuggestionUrl = () => {
+  return `/api/category-suggestions`;
+};
+
+export const createCategorySuggestion = async (
+  createCategorySuggestionBody: CreateCategorySuggestionBody,
+  options?: RequestInit,
+): Promise<CategorySuggestion> => {
+  return customFetch<CategorySuggestion>(getCreateCategorySuggestionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createCategorySuggestionBody),
+  });
+};
+
+export const getCreateCategorySuggestionMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCategorySuggestion>>,
+    TError,
+    { data: BodyType<CreateCategorySuggestionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCategorySuggestion>>,
+  TError,
+  { data: BodyType<CreateCategorySuggestionBody> },
+  TContext
+> => {
+  const mutationKey = ["createCategorySuggestion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCategorySuggestion>>,
+    { data: BodyType<CreateCategorySuggestionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCategorySuggestion(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCategorySuggestionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCategorySuggestion>>
+>;
+export type CreateCategorySuggestionMutationBody =
+  BodyType<CreateCategorySuggestionBody>;
+export type CreateCategorySuggestionMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit a category suggestion for later review
+ */
+export const useCreateCategorySuggestion = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCategorySuggestion>>,
+    TError,
+    { data: BodyType<CreateCategorySuggestionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCategorySuggestion>>,
+  TError,
+  { data: BodyType<CreateCategorySuggestionBody> },
+  TContext
+> => {
+  return useMutation(getCreateCategorySuggestionMutationOptions(options));
+};
+
+/**
+ * @summary List category suggestions for admin review
+ */
+export const getListCategorySuggestionsUrl = (
+  params?: ListCategorySuggestionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/category-suggestions?${stringifiedParams}`
+    : `/api/category-suggestions`;
+};
+
+export const listCategorySuggestions = async (
+  params?: ListCategorySuggestionsParams,
+  options?: RequestInit,
+): Promise<CategorySuggestion[]> => {
+  return customFetch<CategorySuggestion[]>(
+    getListCategorySuggestionsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListCategorySuggestionsQueryKey = (
+  params?: ListCategorySuggestionsParams,
+) => {
+  return [`/api/category-suggestions`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCategorySuggestionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCategorySuggestions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListCategorySuggestionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listCategorySuggestions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListCategorySuggestionsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listCategorySuggestions>>
+  > = ({ signal }) =>
+    listCategorySuggestions(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCategorySuggestions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListCategorySuggestionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCategorySuggestions>>
+>;
+export type ListCategorySuggestionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List category suggestions for admin review
+ */
+
+export function useListCategorySuggestions<
+  TData = Awaited<ReturnType<typeof listCategorySuggestions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListCategorySuggestionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listCategorySuggestions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListCategorySuggestionsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Mark a category suggestion as approved or rejected
+ */
+export const getUpdateCategorySuggestionStatusUrl = (suggestionId: string) => {
+  return `/api/category-suggestions/${suggestionId}/status`;
+};
+
+export const updateCategorySuggestionStatus = async (
+  suggestionId: string,
+  updateCategorySuggestionStatusBody: UpdateCategorySuggestionStatusBody,
+  options?: RequestInit,
+): Promise<CategorySuggestion> => {
+  return customFetch<CategorySuggestion>(
+    getUpdateCategorySuggestionStatusUrl(suggestionId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(updateCategorySuggestionStatusBody),
+    },
+  );
+};
+
+export const getUpdateCategorySuggestionStatusMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCategorySuggestionStatus>>,
+    TError,
+    {
+      suggestionId: string;
+      data: BodyType<UpdateCategorySuggestionStatusBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCategorySuggestionStatus>>,
+  TError,
+  { suggestionId: string; data: BodyType<UpdateCategorySuggestionStatusBody> },
+  TContext
+> => {
+  const mutationKey = ["updateCategorySuggestionStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCategorySuggestionStatus>>,
+    { suggestionId: string; data: BodyType<UpdateCategorySuggestionStatusBody> }
+  > = (props) => {
+    const { suggestionId, data } = props ?? {};
+
+    return updateCategorySuggestionStatus(suggestionId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCategorySuggestionStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCategorySuggestionStatus>>
+>;
+export type UpdateCategorySuggestionStatusMutationBody =
+  BodyType<UpdateCategorySuggestionStatusBody>;
+export type UpdateCategorySuggestionStatusMutationError =
+  ErrorType<ErrorResponse>;
+
+/**
+ * @summary Mark a category suggestion as approved or rejected
+ */
+export const useUpdateCategorySuggestionStatus = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCategorySuggestionStatus>>,
+    TError,
+    {
+      suggestionId: string;
+      data: BodyType<UpdateCategorySuggestionStatusBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateCategorySuggestionStatus>>,
+  TError,
+  { suggestionId: string; data: BodyType<UpdateCategorySuggestionStatusBody> },
+  TContext
+> => {
+  return useMutation(getUpdateCategorySuggestionStatusMutationOptions(options));
+};
