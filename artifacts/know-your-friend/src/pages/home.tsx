@@ -416,7 +416,7 @@ export default function Home() {
                   }
                   placeholder={t(`suggestion.${field}Placeholder`)}
                   maxLength={80}
-                  className="bg-white/5 border-white/10"
+                  className="bg-white/5 border-white/10 placeholder:text-foreground/35"
                 />
               </div>
             ))}
