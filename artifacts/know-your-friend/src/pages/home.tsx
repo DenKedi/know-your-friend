@@ -414,6 +414,7 @@ export default function Home() {
                   onChange={(event) =>
                     setSuggestion((current) => ({ ...current, [field]: event.target.value }))
                   }
+                  placeholder={t(`suggestion.${field}Placeholder`)}
                   maxLength={80}
                   className="bg-white/5 border-white/10"
                 />
