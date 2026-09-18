@@ -7,12 +7,16 @@ interface JoinRoomQrProps {
   roomCode: string;
 }
 
+const PUBLIC_GAME_URL = "https://know-your-friend.com/";
+
 export function JoinRoomQr({ roomCode }: JoinRoomQrProps) {
   const { t } = useI18n();
   const [qrOpen, setQrOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  const inviteUrl = new URL(import.meta.env.BASE_URL, window.location.origin);
+  // Einladungslinks führen immer über die öffentliche Spiel-Domain.
+  // Dadurch funktionieren QR-Codes auch, wenn der Host über itch.io spielt.
+  const inviteUrl = new URL(PUBLIC_GAME_URL);
   inviteUrl.searchParams.set("room", roomCode);
 
   const handleShare = async () => {
@@ -70,16 +74,27 @@ export function JoinRoomQr({ roomCode }: JoinRoomQrProps) {
 
           <div className="flex flex-col items-center gap-3">
             <div className="pr-7 text-center">
-              <p className="text-xl font-black tracking-tight">{t("lobby.joinQrReady")}</p>
-              <p className="mt-1 text-sm leading-snug text-foreground/70">{t("lobby.joinQrHint")}</p>
+              <p className="text-xl font-black tracking-tight">
+                {t("lobby.joinQrReady")}
+              </p>
+              <p className="mt-1 text-sm leading-snug text-foreground/70">
+                {t("lobby.joinQrHint")}
+              </p>
             </div>
+
             <div
               className="w-full max-w-[22rem] border border-primary/25 bg-white p-3 shadow-xl"
               role="img"
               aria-label={`${t("lobby.joinQrReady")}: ${roomCode}`}
             >
-              <QRCodeSVG className="h-auto w-full" value={inviteUrl.toString()} size={440} level="M" />
+              <QRCodeSVG
+                className="h-auto w-full"
+                value={inviteUrl.toString()}
+                size={440}
+                level="M"
+              />
             </div>
+
             <button
               type="button"
               onClick={handleShare}
