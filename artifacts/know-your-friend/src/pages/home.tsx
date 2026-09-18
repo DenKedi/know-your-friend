@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { LoaderCircle, Send } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import {
   getGetRoomQueryKey,
@@ -41,6 +42,7 @@ export default function Home() {
   const roomCodeInputRef = useRef<HTMLInputElement>(null);
   const inviteRoomCode = new URLSearchParams(search).get("room")?.trim().toUpperCase() ?? "";
   const normalizedRoomCode = roomCode.trim().toUpperCase();
+  const canSubmitSuggestion = Object.values(suggestion).every((value) => value.trim());
 
   useEffect(() => {
     if (inviteRoomCode.length !== 4) return;
@@ -398,38 +400,85 @@ export default function Home() {
       </Dialog>
 
       <Dialog open={suggestionOpen} onOpenChange={setSuggestionOpen}>
-        <DialogContent className="max-w-sm border-white/15 bg-card/90 backdrop-blur-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black">{t("suggestion.title")}</DialogTitle>
-            <DialogDescription>{t("suggestion.description")}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            {(["label", "leftLabel", "rightLabel"] as const).map((field) => (
-              <div key={field} className="space-y-1">
-                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-foreground/50">
-                  {t(`suggestion.${field}`)}
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md overflow-hidden border-white/15 bg-card/95 p-0 shadow-2xl backdrop-blur-2xl sm:rounded-3xl">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitSuggestion();
+            }}
+          >
+            <DialogHeader className="space-y-3 px-6 pb-6 pt-7 text-center sm:text-center">
+              <div className="space-y-1.5">
+                <DialogTitle className="text-2xl font-black tracking-tight">
+                  {t("suggestion.title")}
+                </DialogTitle>
+                <DialogDescription className="mx-auto max-w-xs text-sm leading-relaxed text-foreground/65">
+                  {t("suggestion.description")}
+                </DialogDescription>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-5 px-6 pb-6">
+              <div className="space-y-2">
+                <label
+                  htmlFor="suggestion-label"
+                  className="text-xs font-bold uppercase tracking-[0.12em] text-foreground/60"
+                >
+                  {t("suggestion.label")}
                 </label>
                 <Input
-                  value={suggestion[field]}
+                  id="suggestion-label"
+                  autoFocus
+                  value={suggestion.label}
                   onChange={(event) =>
-                    setSuggestion((current) => ({ ...current, [field]: event.target.value }))
+                    setSuggestion((current) => ({ ...current, label: event.target.value }))
                   }
-                  placeholder={t(`suggestion.${field}Placeholder`)}
+                  placeholder={t("suggestion.labelPlaceholder")}
                   maxLength={80}
-                  className="bg-white/5 border-white/10 placeholder:text-foreground/35"
+                  className="h-12 rounded-xl border-white/15 bg-white/[0.06] px-4 text-base placeholder:text-foreground/30 focus-visible:border-primary/60"
                 />
               </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={submitSuggestion}
-            disabled={createSuggestion.isPending}
-            className="rounded-full py-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
-            style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
-          >
-            {t("suggestion.submit")}
-          </button>
+
+              <div className="grid grid-cols-2 gap-3">
+                {(["leftLabel", "rightLabel"] as const).map((field, index) => (
+                  <div key={field}>
+                    <label
+                      htmlFor={`suggestion-${field}`}
+                      className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-foreground/60"
+                    >
+                      {t(`suggestion.${field}`)}
+                    </label>
+                    <Input
+                      id={`suggestion-${field}`}
+                      value={suggestion[field]}
+                      onChange={(event) =>
+                        setSuggestion((current) => ({ ...current, [field]: event.target.value }))
+                      }
+                      placeholder={t(`suggestion.${field}Placeholder`)}
+                      maxLength={80}
+                      className="h-12 min-w-0 rounded-xl border-white/15 bg-white/[0.06] px-3 text-center text-sm placeholder:text-foreground/30 focus-visible:border-primary/60"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-white/10 bg-black/10 p-4">
+              <button
+                type="submit"
+                disabled={!canSubmitSuggestion || createSuggestion.isPending}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold text-primary-foreground shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-45 disabled:saturate-0 disabled:hover:translate-y-0"
+                style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%)" }}
+              >
+                {createSuggestion.isPending ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Send className="h-4 w-4" aria-hidden />
+                )}
+                {t("suggestion.submit")}
+              </button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
